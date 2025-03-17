@@ -87,10 +87,14 @@ import type { ApiEndpoint } from '${
   await fs.writeFile(path.join(ROOT_DIR, config.outputPath), output);
 }
 
-async function generate() {
+async function generateTypes() {
   for (const config of ROUTE_CONFIGS) {
     await generateApiTypes(config);
   }
 }
 
-generate().catch(console.error);
+export { generateTypes };
+
+if (require.main === module) {
+  generateTypes().catch(console.error);
+}

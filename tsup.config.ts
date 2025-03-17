@@ -1,7 +1,7 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-  entry: ["src/index.ts", "src/cli/vite-plugin.ts"],
+  entry: ["src/index.ts", "src/cli/vite-plugin.ts", "src/cli/generate.ts"],
   format: ["esm", "cjs"],
   dts: true,
   splitting: false,
@@ -13,5 +13,6 @@ export default defineConfig({
     options.banner = {
       js: '"use client";',
     };
+    return options;
   },
 });
