@@ -40,57 +40,6 @@ declare module "../src/types" {
   }
 }
 
-// Mock the ApiTree module
-vi.mock("../src/generated/apiTree.gen", () => {
-  const mockApiTree: TestApiTree = {
-    "/users": {
-      GET: {
-        method: "GET",
-        response: {} as { users: Array<{ id: string; name: string }> },
-        body: undefined,
-        query: undefined,
-        params: {} as Record<string, string>,
-      },
-      POST: {
-        method: "POST",
-        response: {} as { id: string; name: string },
-        body: {} as { name: string },
-        query: undefined,
-        params: {} as Record<string, string>,
-      },
-    },
-    "/users/[id]": {
-      GET: {
-        method: "GET",
-        response: {} as { id: string; name: string },
-        body: undefined,
-        query: undefined,
-        params: {} as { id: string },
-      },
-      PUT: {
-        method: "PUT",
-        response: {} as { id: string; name: string },
-        body: {} as { name: string },
-        query: undefined,
-        params: {} as { id: string },
-      },
-    },
-    "/users/[userId]/posts": {
-      GET: {
-        method: "GET",
-        response: {} as Array<{ id: string; title: string }>,
-        body: undefined,
-        query: undefined,
-        params: {} as { userId: string },
-      },
-    },
-  };
-
-  return {
-    ApiTree: mockApiTree,
-  };
-});
-
 describe("API Hooks Integration", () => {
   let queryClient: QueryClient;
   let axiosInstance: AxiosStatic;
