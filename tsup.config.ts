@@ -8,7 +8,7 @@ export default defineConfig({
   sourcemap: true,
   clean: true,
   treeshake: true,
-  external: ["react", "@tanstack/react-query", "axios", "zod"],
+  external: ["react", "@tanstack/react-query", "axios", "zod", "vite"],
   esbuildOptions(options) {
     options.banner = {
       js: '"use client";',
