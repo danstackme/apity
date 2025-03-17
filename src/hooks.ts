@@ -1,4 +1,9 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery,
+  UseMutationOptions,
+  UseQueryOptions,
+} from "@tanstack/react-query";
 import { useApiContext } from "./context";
 import type {
   ApiEndpoint,
@@ -13,33 +18,43 @@ type PathOf<T> = keyof T & string;
 type UseFetchOptions<
   TPath extends PathOf<ApiTree>,
   TEndpoint extends ApiEndpoint<any, any, any, any>
-> = {
+> = Omit<
+  UseQueryOptions<
+    TEndpoint extends ApiEndpoint<infer Response, any, any, any>
+      ? Response
+      : unknown,
+    Error,
+    TEndpoint extends ApiEndpoint<infer Response, any, any, any>
+      ? Response
+      : unknown,
+    [string, ExtractRouteParams<TPath> | undefined, any]
+  >,
+  "queryKey" | "queryFn"
+> & {
   params?: ExtractRouteParams<TPath>;
   query?: TEndpoint extends ApiEndpoint<any, any, infer Query, any>
     ? Query
-    : never;
-  enabled?: boolean;
+    : undefined;
 };
 
 type UseMutateOptions<
   TPath extends PathOf<ApiTree>,
   TMethod extends HttpMethod
-> = {
+> = Omit<UseMutationOptions<any, Error, any, unknown>, "mutationFn"> & {
   method: TMethod;
   params?: ExtractRouteParams<TPath>;
-  onSuccess?: (data: any) => void;
-  onError?: (error: any) => void;
 };
 
 export function useFetch<
   TPath extends PathOf<ApiTree>,
   TEndpoint extends ApiEndpoint<any, any, any, any>
 >(path: TPath, options: UseFetchOptions<TPath, TEndpoint> = {}) {
-  const { params, query, enabled = true } = options;
+  const { params, query, enabled = true, ...queryOptions } = options;
   const { client, baseURL } = useApiContext();
   const url = interpolatePath(path, params || {});
 
   return useQuery({
+    ...queryOptions,
     queryKey: [path, params, query],
     queryFn: async () => {
       const response = await client.get(url, {
@@ -56,11 +71,12 @@ export function useMutate<
   TPath extends PathOf<ApiTree>,
   TMethod extends Exclude<HttpMethod, "GET">
 >(path: TPath, options: UseMutateOptions<TPath, TMethod>) {
-  const { method, params, onSuccess, onError } = options;
+  const { method, params, ...mutationOptions } = options;
   const { client, baseURL } = useApiContext();
   const url = interpolatePath(path, params || {});
 
   return useMutation({
+    ...mutationOptions,
     mutationFn: async (body: any) => {
       const response = await client.request({
         method: method?.toLowerCase() || "post",
@@ -70,8 +86,6 @@ export function useMutate<
       });
       return response.data;
     },
-    onSuccess,
-    onError,
   });
 }
 

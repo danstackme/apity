@@ -1,8 +1,6 @@
-import { useState } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ApiProvider, useFetch, useMutate } from "@danstackme/apity";
-import { GET as getPets, POST as createPet } from "./routes/pets";
-import { GET as getPetById, PUT as updatePet } from "./routes/pets._id_";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useState } from "react";
 import "./App.css";
 
 // Create a client
@@ -10,9 +8,7 @@ const queryClient = new QueryClient();
 
 // Example components using file-based routing
 function PetsListFileBasedExample() {
-  const { data, isLoading, error } = useFetch("/pets", {
-    endpoint: getPets,
-  });
+  const { data, isLoading, error } = useFetch("/pets");
 
   if (isLoading) return <div>Loading...</div>;
   if (error) return <div>Error: {error.message}</div>;
@@ -21,11 +17,13 @@ function PetsListFileBasedExample() {
     <div>
       <h2>Pets List (File-based)</h2>
       <ul>
-        {data?.pets.map((pet) => (
-          <li key={pet.id}>
-            {pet.name} - {pet.type}
-          </li>
-        ))}
+        {data?.pets.map(
+          (pet: { id: string | number; name: string; type: string }) => (
+            <li key={pet.id}>
+              {pet.name} - {pet.type}
+            </li>
+          )
+        )}
       </ul>
     </div>
   );
@@ -33,9 +31,7 @@ function PetsListFileBasedExample() {
 
 // Example components using single-file API tree
 function PetsListSingleFileExample() {
-  const { data, isLoading, error } = useFetch("/pets", {
-    endpoint: api.apiTree["/pets"].GET,
-  });
+  const { data, isLoading, error } = useFetch("/pets");
 
   if (isLoading) return <div>Loading...</div>;
   if (error) return <div>Error: {error.message}</div>;
@@ -44,11 +40,13 @@ function PetsListSingleFileExample() {
     <div>
       <h2>Pets List (Single-file)</h2>
       <ul>
-        {data?.pets.map((pet) => (
-          <li key={pet.id}>
-            {pet.name} - {pet.type}
-          </li>
-        ))}
+        {data?.pets.map(
+          (pet: { id: string | number; name: string; type: string }) => (
+            <li key={pet.id}>
+              {pet.name} - {pet.type}
+            </li>
+          )
+        )}
       </ul>
     </div>
   );
@@ -59,9 +57,8 @@ function CreatePetForm() {
   const [name, setName] = useState("");
   const [type, setType] = useState("");
 
-  const { mutate, isLoading } = useMutate("/pets", {
+  const { mutate } = useMutate("/pets", {
     method: "POST",
-    endpoint: createPet,
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -94,9 +91,6 @@ function CreatePetForm() {
           />
         </label>
       </div>
-      <button type="submit" disabled={isLoading}>
-        {isLoading ? "Creating..." : "Create Pet"}
-      </button>
     </form>
   );
 }

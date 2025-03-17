@@ -1,465 +1,457 @@
-# APity
+# DanStack API
 
-Type-safe API client generator for React applications with file-based routing and runtime validation.
-
-[![npm version](https://img.shields.io/npm/v/@danstackme/apity.svg)](https://www.npmjs.com/package/@danstackme/apity)
-[![CI](https://github.com/danstack/apity/actions/workflows/ci.yml/badge.svg)](https://github.com/danstack/apity/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/danstack/apity/branch/main/graph/badge.svg)](https://codecov.io/gh/danstack/apity)
-[![npm downloads](https://img.shields.io/npm/dm/@danstackme/apity.svg)](https://www.npmjs.com/package/@danstackme/apity)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
-[![React](https://img.shields.io/badge/React-18.0+-blue.svg)](https://reactjs.org/)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
-[![Commitizen friendly](https://img.shields.io/badge/commitizen-friendly-brightgreen.svg)](http://commitizen.github.io/cz-cli/)
-
-APity generates fully type-safe API clients with:
-
-- File-based routing for API endpoints
-- Runtime validation using Zod
-- React Query integration out of the box
-- Type inference for responses, request bodies, and query parameters
-- Path parameter validation
-- Support for OpenAPI/Swagger specifications (coming soon)
+A type-safe API client for React applications, built with TypeScript and React Query.
 
 ## Features
 
-- 🗂️ File-based routing or single-file API definition
-- 🔒 Type-safe API calls with TypeScript
-- ✨ Runtime validation with Zod
-- 🔄 Built-in React Query integration
-- 📚 OpenAPI/Swagger import support
+- 🔒 Type-safe API calls with full TypeScript support
+- 🎯 File-based API endpoint definitions
+- 🔄 Automatic request caching and invalidation with React Query
+- 🛠️ Middleware support for request/response transformation
+- 📦 Zero dependencies (except React Query and Axios)
 
 ## Installation
 
 ```bash
-npm install @danstackme/apity @tanstack/react-query axios zod
+npm install @danstackme/apity
 ```
 
 ## Quick Start
 
-### Option 1: Import from OpenAPI/Swagger
+1. Define your API endpoints using either file-based routing or a single file:
 
-If you have an existing OpenAPI/Swagger specification, you can quickly generate your API client:
+### Option 1: File-based Routing
 
-```bash
-# Install the package
-npm install @danstackme/apity
-
-# Generate API client from OpenAPI spec
-npx apity-import swagger.yaml
-
-# Or for a single-file output instead of file-based routing
-npx apity-import swagger.yaml --output single-file
-```
-
-The importer supports both YAML and JSON formats, and can handle both OpenAPI 3.x and Swagger 2.0 specifications.
-
-#### File-Based Output
-
-When using `--output file-based` (default), the importer will:
-
-1. Create a `src/routes` directory (customizable with `--outDir`)
-2. Generate separate files for each API endpoint
-3. Convert path parameters from `{param}` to `[param]` format
-
-Example output structure:
-
-```
-src/routes/
-  ├── pets.ts              # /pets endpoints
-  └── pets._id_.ts         # /pets/{id} endpoints
-```
-
-#### Single-File Output
-
-When using `--output single-file`, the importer will:
-
-1. Create a `src/generated-api.ts` file (customizable with `--outDir`)
-2. Generate a single API tree with all endpoints
-
-Example usage after generation:
+Create your API endpoints in the `endpoints` directory:
 
 ```typescript
-// With file-based routing
-import { GET, POST } from "./routes/pets";
-import { GET as getById, PUT } from "./routes/pets._id_";
-
-// With single-file
-import { api } from "./generated-api";
-
-// Setup your API provider
-import { ApiProvider } from "@danstackme/apity";
-
-function App() {
-  return (
-    <ApiProvider baseURL="https://api.example.com">
-      {/* Your app */}
-    </ApiProvider>
-  );
-}
-
-// Use the generated hooks
-function PetsList() {
-  // File-based routing
-  const { data } = useFetch("/pets", {
-    endpoint: GET,
-  });
-
-  // Or with single-file
-  const { data } = useFetch("/pets", {
-    endpoint: api.apiTree["/pets"].GET,
-  });
-
-  return (
-    <ul>
-      {data?.pets.map((pet) => (
-        <li key={pet.id}>{pet.name}</li>
-      ))}
-    </ul>
-  );
-}
-
-function CreatePet() {
-  // File-based routing
-  const { mutate } = useMutate("/pets", {
-    method: "POST",
-    endpoint: POST,
-  });
-
-  // Or with single-file
-  const { mutate } = useMutate("/pets", {
-    method: "POST",
-    endpoint: api.apiTree["/pets"].POST,
-  });
-
-  const handleSubmit = (data: { name: string; type: string }) => {
-    mutate(data);
-  };
-
-  return <form onSubmit={/* ... */}>{/* ... */}</form>;
-}
-```
-
-### Option 2: Manual Definition
-
-If you prefer to define your API manually, you can use either file-based routing or a single API tree. [See the manual setup documentation](#manual-setup).
-
-## OpenAPI Import Options
-
-```bash
-npx apity-import --help
-
-Usage: apity-import [options] <file>
-
-Import OpenAPI/Swagger specification and generate API routes
-
-Arguments:
-  file                     OpenAPI/Swagger specification file (JSON or YAML)
-
-Options:
-  -o, --output <type>     Output type: file-based or single-file (default: "file-based")
-  -d, --outDir <dir>      Output directory (default: "src/routes" or "src")
-  -h, --help              display help for command
-```
-
-The importer supports:
-
-- OpenAPI 3.x and Swagger 2.0 specifications
-- JSON and YAML formats
-- Path parameters
-- Query parameters
-- Request bodies
-- Response schemas
-- All HTTP methods (GET, POST, PUT, PATCH, DELETE)
-
-## Setup
-
-### File-Based Routing
-
-1. Create a `routes` directory in your project:
-
-```
-src/
-  routes/
-    users/
-      [id]/
-        index.ts      # GET /users/:id
-        posts.ts      # GET /users/:id/posts
-      index.ts        # GET /users
-```
-
-2. Define your endpoints using the `createApiEndpoint` function:
-
-The generic type parameters for `createApiEndpoint` are:
-
-```typescript
-createApiEndpoint<
-  TResponse = unknown,  // Response data type
-  TBody = void,        // Request body type
-  TQuery = void,       // Query parameters type
-  TParams = void       // Path parameters type (usually inferred)
->
-```
-
-```typescript
-// src/routes/users/index.ts
+// endpoints/users/index.ts
 import { z } from "zod";
-import { createApiEndpoint } from "@danstackme/apity";
 
-// Using Zod schemas (recommended for runtime validation)
-export const GET = createApiEndpoint({
-  response: z.array(
-    z.object({
-      id: z.string(),
-      name: z.string(),
-    })
-  ),
+const UserSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  email: z.string().email(),
 });
 
-// Using TypeScript types/interfaces (no runtime validation)
-interface User {
-  id: string;
-  name: string;
-}
+// Define multiple methods in a single file
+export const GET = {
+  method: "GET",
+  responseSchema: z.array(UserSchema),
+  querySchema: z.object({
+    filter: z.string().optional(),
+  }),
+};
 
-interface CreateUserBody {
-  name: string;
-}
-
-export const POST = createApiEndpoint<User, CreateUserBody>({
+export const POST = {
   method: "POST",
-});
-
-// Mix and match Zod and TypeScript types
-interface UpdateUserBody {
-  name?: string;
-  email?: string;
-}
-
-export const PUT = createApiEndpoint<
-  User, // Response type
-  UpdateUserBody, // Body type
-  {
-    // Query params type
-    include: string[];
-  }
->({
-  method: "PUT",
-  // You can still use Zod for partial runtime validation
-  querySchema: z.object({
-    include: z.array(z.string()),
+  responseSchema: UserSchema,
+  bodySchema: z.object({
+    name: z.string(),
+    email: z.string().email(),
   }),
-});
-
-// Using type aliases and generics
-type PaginatedResponse<T> = {
-  items: T[];
-  total: number;
-  page: number;
 };
-
-type SearchQuery = {
-  q: string;
-  page?: number;
-  limit?: number;
-};
-
-export const SEARCH = createApiEndpoint<
-  PaginatedResponse<User>,
-  void,
-  SearchQuery
->({
-  method: "GET",
-});
 ```
 
 ```typescript
-// src/routes/users/[id]/index.ts
+// endpoints/users/[id].ts
 import { z } from "zod";
-import { createApiEndpoint } from "@danstackme/apity";
 
-// Example combining TypeScript types with Zod schemas
-interface UserWithDetails {
-  id: string;
-  name: string;
-  email: string;
-  profile: {
-    avatar: string;
-    bio: string;
-  };
-}
+const UserSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  email: z.string().email(),
+});
 
-type IncludeQuery = {
-  include?: ("posts" | "comments")[];
+// Define multiple methods for a single user endpoint
+export const GET = {
+  method: "GET",
+  responseSchema: UserSchema,
+  params: { id: z.string() },
 };
 
-export const GET = createApiEndpoint<UserWithDetails, void, IncludeQuery>({
-  method: "GET",
-  // Optional runtime validation for specific fields
-  querySchema: z.object({
-    include: z.array(z.enum(["posts", "comments"])).optional(),
+export const PUT = {
+  method: "PUT",
+  responseSchema: UserSchema,
+  bodySchema: z.object({
+    name: z.string().optional(),
+    email: z.string().email().optional(),
   }),
-});
+  params: { id: z.string() },
+};
 
-// Using discriminated unions
-type UserUpdate =
-  | { type: "profile"; bio: string; avatar?: string }
-  | { type: "settings"; theme: "light" | "dark"; notifications: boolean };
-
-export const PATCH = createApiEndpoint<UserWithDetails, UserUpdate>({
-  method: "PATCH",
-  // Optional runtime validation for complex types
-  bodySchema: z.discriminatedUnion("type", [
-    z.object({
-      type: z.literal("profile"),
-      bio: z.string(),
-      avatar: z.string().optional(),
-    }),
-    z.object({
-      type: z.literal("settings"),
-      theme: z.enum(["light", "dark"]),
-      notifications: z.boolean(),
-    }),
-  ]),
-});
-
-export const DELETE = createApiEndpoint<void>({
+export const DELETE = {
   method: "DELETE",
-});
+  responseSchema: z.void(),
+  params: { id: z.string() },
+};
 ```
 
-3. Initialize your API client:
+```typescript
+// endpoints/users/[id]/posts.ts
+import { z } from "zod";
+
+const PostSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  content: z.string(),
+});
+
+export const GET = {
+  method: "GET",
+  responseSchema: z.array(PostSchema),
+  params: { id: z.string() },
+};
+
+export const POST = {
+  method: "POST",
+  responseSchema: PostSchema,
+  bodySchema: z.object({
+    title: z.string(),
+    content: z.string(),
+  }),
+  params: { id: z.string() },
+};
+```
+
+### Option 2: Single File Definition
 
 ```typescript
 // src/api.ts
+import { z } from "zod";
 import { createApi } from "@danstackme/apity";
-import type { ApiTree } from "./generated/apiTree.gen";
 
-export const api = createApi<ApiTree>({
-  baseURL: "https://api.example.com",
+const UserSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  email: z.string().email(),
 });
+
+const PostSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  content: z.string(),
+});
+
+const api = createApi({
+  baseUrl: "https://api.example.com",
+  apiTree: {
+    "/users": {
+      GET: {
+        method: "GET",
+        responseSchema: z.array(UserSchema),
+        querySchema: z.object({
+          filter: z.string().optional(),
+        }),
+      },
+      POST: {
+        method: "POST",
+        responseSchema: UserSchema,
+        bodySchema: z.object({
+          name: z.string(),
+          email: z.string().email(),
+        }),
+      },
+    },
+    "/users/[id]": {
+      GET: {
+        method: "GET",
+        responseSchema: UserSchema,
+        params: { id: z.string() },
+      },
+      PUT: {
+        method: "PUT",
+        responseSchema: UserSchema,
+        bodySchema: z.object({
+          name: z.string().optional(),
+          email: z.string().email().optional(),
+        }),
+        params: { id: z.string() },
+      },
+    },
+    "/users/[id]/posts": {
+      GET: {
+        method: "GET",
+        responseSchema: z.array(PostSchema),
+        params: { id: z.string() },
+      },
+    },
+  },
+});
+
+export default api;
 ```
 
-4. Use in your components:
+2. Set up the API provider and type augmentation in your app:
+
+```typescript
+// src/types.ts
+import type { Register } from "@danstackme/apity";
+import type { ApiTree } from "./generated/apiTree.gen"; // For file-based routing
+// OR
+import type { ApiTree } from "./api"; // For single file definition
+
+declare module "@danstackme/apity" {
+  interface Register {
+    apiTree: ApiTree;
+  }
+}
+
+// src/App.tsx
+import { ApiProvider } from "@danstackme/apity";
+import api from "./api"; // For single file definition
+// OR
+import { createApi } from "@danstackme/apity";
+import type { ApiTree } from "./generated/apiTree.gen"; // For file-based routing
+
+// For file-based routing
+const api = createApi({
+  baseUrl: "https://api.example.com",
+  apiTree: {} as ApiTree, // This will be populated by the generated code
+});
+
+function App() {
+  return (
+    <ApiProvider
+      baseURL="https://api.example.com"
+      client={api.client}
+      queryClient={api.queryClient}
+    >
+      <YourApp />
+    </ApiProvider>
+  );
+}
+```
+
+3. Use the hooks in your components:
 
 ```typescript
 import { useFetch, useMutate } from "@danstackme/apity";
 
-function UserComponent() {
-  // TypeScript will infer all types correctly
-  const { data: users } = useFetch('/users');
-  const { data: userWithDetails } = useFetch('/users/[id]', {
-    params: { id: '123' },
-    query: { include: ['posts'] } // Type-checked: only 'posts' | 'comments' allowed
+function UserList() {
+  // Fetch users with query parameters
+  const { data: users, isLoading } = useFetch("/users", {
+    query: { filter: "active" },
   });
 
-  const { mutate: updateUser } = useMutate('/users/[id]', {
-    method: 'PATCH',
-    params: { id: '123' }
+  // Fetch a single user with path parameters
+  const { data: user } = useFetch("/users/[id]", {
+    params: { id: "123" },
   });
 
-  // Type-checked: must match UserUpdate type
-  const handleUpdateProfile = () => {
-    updateUser({
-      type: 'profile',
-      bio: 'New bio'
-    });
-  };
+  // Fetch user's posts with nested path parameters
+  const { data: posts } = useFetch("/users/[id]/posts", {
+    params: { id: "123" },
+  });
 
-  const handleUpdateSettings = () => {
-    updateUser({
-      type: 'settings',
-      theme: 'dark',
-      notifications: true
-    });
-  };
+  // Create a new user
+  const { mutate: createUser } = useMutate("/users", {
+    method: "POST",
+  });
 
-  return (/* ... */);
+  // Update a user
+  const { mutate: updateUser } = useMutate("/users/[id]", {
+    method: "PUT",
+    params: { id: "123" },
+  });
+
+  // Delete a user
+  const { mutate: deleteUser } = useMutate("/users/[id]", {
+    method: "DELETE",
+    params: { id: "123" },
+  });
+
+  if (isLoading) return <div>Loading...</div>;
+
+  return (
+    <div>
+      {users?.map((user) => (
+        <div key={user.id}>
+          {user.name}
+          <button onClick={() => deleteUser()}>Delete</button>
+        </div>
+      ))}
+      <button
+        onClick={() =>
+          createUser({ name: "New User", email: "new@example.com" })
+        }
+      >
+        Add User
+      </button>
+      <button
+        onClick={() =>
+          updateUser({ name: "Updated Name", email: "updated@example.com" })
+        }
+      >
+        Update User
+      </button>
+    </div>
+  );
 }
 ```
 
-When using TypeScript types instead of Zod schemas:
+## API Reference
 
-- You get full type safety during development
-- No runtime validation is performed (unless you provide optional schemas)
-- Smaller bundle size as Zod schemas aren't included
-- Better support for complex types like generics and unions
+### `createApi`
 
-When using Zod schemas:
-
-- You get both type safety and runtime validation
-- Automatic error messages for invalid data
-- Easier data transformation and parsing
-- Slightly larger bundle size
-
-You can mix and match both approaches based on your needs!
-
-### Inline API Definition
-
-You can also define your API inline without file-based routing:
+Creates a new API instance with your configuration.
 
 ```typescript
-import { z } from "zod";
-import { createApi } from "@danstackme/apity";
-
-const api = createApi({
-  baseURL: "https://api.example.com",
-  endpoints: {
-    "/users": {
-      GET: createApiEndpoint({
-        response: z.array(
-          z.object({
-            id: z.string(),
-            name: z.string(),
-          })
-        ),
-      }),
-      POST: createApiEndpoint({
-        body: z.object({
-          name: z.string(),
-        }),
-        response: z.object({
-          id: z.string(),
-          name: z.string(),
-        }),
-      }),
-    },
-    "/users/[id]": {
-      GET: createApiEndpoint({
-        response: z.object({
-          id: z.string(),
-          name: z.string(),
-        }),
-        query: z.object({
-          include: z.array(z.string()).optional(),
-        }),
-      }),
-    },
-  },
+function createApi(config: {
+  // The base URL for all API requests
+  baseUrl: string;
+  // Optional headers to include in all requests
+  headers?: Record<string, string>;
+  // Optional custom Axios instance
+  client?: AxiosInstance;
+  // Optional custom React Query client
+  queryClient?: QueryClient;
+  // Your API endpoint definitions
+  apiTree: {
+    [path: string]: {
+      [method: string]: {
+        method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+        responseSchema?: z.ZodType; // Response data validation
+        bodySchema?: z.ZodType; // Request body validation
+        querySchema?: z.ZodType; // Query parameters validation
+        params?: Record<string, z.ZodType>; // Path parameters validation
+      };
+    };
+  };
 });
 ```
 
-## Features
+### `useFetch`
 
-### Path Parameters
-
-Path parameters are automatically typed based on the route path:
+A hook for making GET requests to your API endpoints. This hook extends React Query's `useQuery` hook, so you get all its features and return values.
 
 ```typescript
-// Fully typed path parameters
-const { data } = useFetch("/users/[id]", {
-  params: { id: "123" },
-});
+function useFetch(
+  // The API endpoint path (e.g., "/users" or "/users/[id]")
+  path: string,
+  options?: {
+    // Path parameters for dynamic routes (e.g., { id: "123" } for "/users/[id]")
+    params?: Record<string, string>;
+    // Query parameters to append to the URL (e.g., { filter: "active" })
+    query?: Record<string, any>;
+    // All React Query options are supported
+    enabled?: boolean;
+    staleTime?: number;
+    cacheTime?: number;
+    refetchOnMount?: boolean;
+    refetchOnWindowFocus?: boolean;
+    refetchOnReconnect?: boolean;
+    retry?: number | boolean;
+    retryDelay?: number | ((attemptIndex: number) => number);
+    onSuccess?: (data: any) => void;
+    onError?: (error: Error) => void;
+    onSettled?: (data: any, error: Error | null) => void;
+    // ... and all other React Query options
+  }
+): {
+  // All React Query return values are available
+  data: any;
+  isLoading: boolean;
+  isFetching: boolean;
+  isError: boolean;
+  isSuccess: boolean;
+  error: Error | null;
+  isStale: boolean;
+  isPaused: boolean;
+  isPlaceholderData: boolean;
+  isPreviousData: boolean;
+  isRefetchError: boolean;
+  isRefetching: boolean;
+  isStale: boolean;
+  isPaused: boolean;
+  isPlaceholderData: boolean;
+  isPreviousData: boolean;
+  isRefetchError: boolean;
+  isRefetching: boolean;
+  refetch: () => Promise<any>;
+  remove: () => void;
+  // ... and all other React Query return values
+};
 ```
 
-### Query Parameters
+### `useMutate`
 
-Query parameters are validated at runtime and typed:
+A hook for making POST, PUT, PATCH, or DELETE requests to your API endpoints. This hook extends React Query's `useMutation` hook, so you get all its features and return values.
 
 ```typescript
-// Typed and validated query parameters
-const { data } = useFetch("/users/[id]", {
-  params: { id: "123" },
-  query: { include: ["posts"] },
-});
+function useMutate(
+  // The API endpoint path (e.g., "/users" or "/users/[id]")
+  path: string,
+  options: {
+    // The HTTP method to use (POST, PUT, PATCH, or DELETE)
+    method: "POST" | "PUT" | "PATCH" | "DELETE";
+    // Path parameters for dynamic routes (e.g., { id: "123" } for "/users/[id]")
+    params?: Record<string, string>;
+    // All React Query mutation options are supported
+    onSuccess?: (data: any, variables: any, context: any) => void;
+    onError?: (error: Error, variables: any, context: any) => void;
+    onSettled?: (
+      data: any,
+      error: Error | null,
+      variables: any,
+      context: any
+    ) => void;
+    onMutate?: (variables: any) => Promise<any> | void;
+    retry?: number | boolean;
+    retryDelay?: number | ((attemptIndex: number) => number);
+    // ... and all other React Query mutation options
+  }
+): {
+  // All React Query mutation return values are available
+  mutate: (variables: any) => void;
+  mutateAsync: (variables: any) => Promise<any>;
+  isLoading: boolean;
+  isError: boolean;
+  isSuccess: boolean;
+  error: Error | null;
+  isIdle: boolean;
+  isPaused: boolean;
+  isPending: boolean;
+  reset: () => void;
+  // ... and all other React Query mutation return values
+};
 ```
+
+## File-based Routing
+
+API endpoints are defined using a file-based routing system in the `endpoints` directory. The file structure determines the API paths:
+
+```
+endpoints/
+  users/
+    [id].ts        # /users/[id] (GET, PUT, DELETE)
+    index.ts       # /users (GET, POST)
+  posts/
+    [id]/
+      comments.ts  # /posts/[id]/comments (GET, POST)
+    index.ts       # /posts (GET, POST)
+```
+
+Each endpoint file can export multiple HTTP methods:
+
+```typescript
+export const GET = {
+  method: "GET",
+  responseSchema: z.ZodType, // Response validation
+  querySchema: z.ZodType, // Query parameters validation
+  params: Record<string, z.ZodType>, // Path parameters validation
+};
+
+export const POST = {
+  method: "POST",
+  responseSchema: z.ZodType,
+  bodySchema: z.ZodType, // Request body validation
+  params: Record<string, z.ZodType>,
+};
+
+// ... other HTTP methods (PUT, PATCH, DELETE)
+```
+
+## License
+
+MIT
