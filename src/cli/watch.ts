@@ -1,8 +1,8 @@
 #!/usr/bin/env tsx
 import { watch } from "chokidar";
-import { resolve, dirname } from "path";
-import { generateTypes } from "../../scripts/generate";
+import { dirname, resolve } from "path";
 import { fileURLToPath } from "url";
+import { generateTypes } from "../../scripts/generate";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -14,7 +14,7 @@ export function watchEndpoints() {
   watch(endpointsDir, {
     ignored: /(^|[/])\../, // ignore dotfiles
     persistent: true,
-  }).on("change", (path) => {
+  }).on("change", () => {
     console.log(`Api endpoints havebeen changed. Regenerating types...`);
     generateTypes();
   });
