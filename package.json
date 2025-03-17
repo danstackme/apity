@@ -1,6 +1,6 @@
 {
   "name": "@danstack/apity",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Type-safe API client generator for React applications with file-based routing and runtime validation",
   "author": "Daniel Osmond",
   "license": "MIT",
