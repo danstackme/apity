@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { createApi, createApiEndpoint } from "../src/createApi";
 import { QueryClient } from "@tanstack/react-query";
 import axios from "axios";
+import { describe, expect, it } from "vitest";
 import { z } from "zod";
+import { createApi, createApiEndpoint } from "../src/createApi";
 import type { ApiRouteDefinition } from "../src/types";
 
 describe("createApi", () => {

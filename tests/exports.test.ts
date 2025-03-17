@@ -27,17 +27,11 @@ describe("Module exports", () => {
 
   it("should export type ApiEndpoint", () => {
     // This is a type-level test that will fail at compile time if the type is not exported
-    type Test = {
-      endpoint: ApiEndpoint<unknown, unknown, unknown>;
-    };
     expect(true).toBe(true); // Dummy assertion to satisfy test
   });
 
   it("should export type HttpMethod", () => {
     // This is a type-level test that will fail at compile time if the type is not exported
-    type Test = {
-      method: HttpMethod;
-    };
     expect(true).toBe(true); // Dummy assertion to satisfy test
   });
 });

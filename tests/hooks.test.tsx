@@ -35,7 +35,7 @@ interface TestApiTree extends ApiRouteDefinition {
 // Augment the Register interface
 declare module "../src/types" {
   interface Register {
-    //@ts-expect-error
+    //@ts-expect-error - Need to implement generic type for apiTree
     apiTree: TestApiTree;
   }
 }
