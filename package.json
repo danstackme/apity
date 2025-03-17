@@ -41,7 +41,13 @@
     "prepublishOnly": "npm run clean && npm run build",
     "prepack": "npm run build",
     "size": "size-limit",
-    "release": "tsx scripts/release.ts"
+    "release": "tsx scripts/release.ts",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix"
+    ]
   },
   "size-limit": [
     {
@@ -81,6 +87,8 @@
     "eslint": "^8.0.0",
     "eslint-plugin-react": "^7.37.4",
     "eslint-plugin-react-hooks": "^4.6.2",
+    "husky": "^9.0.0",
+    "lint-staged": "^15.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "rimraf": "^5.0.0",
