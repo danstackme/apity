@@ -15,7 +15,7 @@ export function watchEndpoints() {
     ignored: /(^|[/])\../, // ignore dotfiles
     persistent: true,
   }).on("change", (path) => {
-    console.log(`File ${path} has been changed. Regenerating types...`);
+    console.log(`Api endpoints havebeen changed. Regenerating types...`);
     generateTypes();
   });
 }

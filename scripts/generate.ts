@@ -16,11 +16,11 @@ type RouteConfig = {
 
 const ROUTE_CONFIGS: RouteConfig[] = [
   {
-    pattern: "src/routes/**/*.{ts,tsx}",
+    pattern: "src/endpoints/**/*.{ts,tsx}",
     outputPath: "src/generated/apiTree.gen.ts",
     outputType: "ApiTree",
     ignore: ["**/*.test.*", "**/*.spec.*"],
-    baseDir: "src/routes",
+    baseDir: "src/endpoints",
   },
   {
     pattern: "tests/fixtures/routes/**/*.{ts,tsx}",
@@ -85,6 +85,8 @@ import type { ApiEndpoint } from '${
 
   // Write the generated file
   await fs.writeFile(path.join(ROOT_DIR, config.outputPath), output);
+
+  console.log("✨ Generated API types");
 }
 
 async function generateTypes() {
