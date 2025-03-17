@@ -1,5 +1,5 @@
 {
-  "name": "@danstack/apity",
+  "name": "@danstackme/apity",
   "version": "0.1.1",
   "description": "Type-safe API client generator for React applications with file-based routing and runtime validation",
   "author": "Daniel Osmond",
@@ -40,7 +40,8 @@
     "clean": "rimraf dist",
     "prepublishOnly": "npm run clean && npm run build",
     "prepack": "npm run build",
-    "size": "size-limit"
+    "size": "size-limit",
+    "release": "tsx scripts/release.ts"
   },
   "size-limit": [
     {
