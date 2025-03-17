@@ -95,6 +95,7 @@ async function generateTypes() {
 
 export { generateTypes };
 
-if (require.main === module) {
+// Only run if this is the main module
+if (process.argv[1] === path.resolve(__dirname, "generate.js")) {
   generateTypes().catch(console.error);
 }
