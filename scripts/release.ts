@@ -164,7 +164,7 @@ const main = async () => {
 
     // Commit version change
     console.log("\n📦 Committing version change...");
-    runCommand("git add package.json");
+    runCommand("git add package.json package-lock.json");
     runCommand(`git commit -m "chore: release ${newVersion}"`);
 
     // Create and push tag
