@@ -19,6 +19,9 @@ RUN npm install
 # Install the latest version of our package
 RUN npm install @danstackme/apity@latest
 
+# Install tsx globally
+RUN npm install -g tsx
+
 # Build the project
 RUN npm run build
 

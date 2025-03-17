@@ -19,6 +19,7 @@ export function watchEndpoints() {
   });
 }
 
-if (process.argv[1] === __filename) {
+// Only run if this is the main module
+if (typeof process !== "undefined" && process.argv[1] === __filename) {
   watchEndpoints();
 }
