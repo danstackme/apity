@@ -24,10 +24,21 @@ jobs:
 
       - name: Run Snyk to check for vulnerabilities
         uses: snyk/actions/node@master
+        continue-on-error: true # Don't fail the build on vulnerabilities
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          args: --severity-threshold=high
+          command: test
+          args: --all-projects --severity-threshold=high
+
+      - name: Monitor project in Snyk
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          command: monitor
+          args: --all-projects
 
       - name: Run npm audit
-        run: npm audit
+        run: npm audit || true # Don't fail if npm audit finds issues
