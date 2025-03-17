@@ -1,11 +1,12 @@
-import type { Plugin } from "vite";
+import type { PluginOption } from "vite";
 import { watchEndpoints } from "./watch";
 
-export function apityPlugin(): Plugin {
-  return {
-    name: "apity",
-    configureServer() {
-      watchEndpoints();
-    },
-  };
-}
+export const apityPlugin = (): PluginOption => ({
+  name: "apity",
+  apply: "serve",
+  configureServer() {
+    watchEndpoints();
+  },
+  enforce: "post",
+  hotUpdate: undefined,
+});

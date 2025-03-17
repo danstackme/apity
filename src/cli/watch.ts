@@ -1,7 +1,11 @@
 #!/usr/bin/env tsx
 import { watch } from "chokidar";
-import { resolve } from "path";
+import { resolve, dirname } from "path";
+import { fileURLToPath } from "url";
 import { generateTypes } from "./generate";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 export function watchEndpoints() {
   const endpointsDir = resolve(process.cwd(), "endpoints");
