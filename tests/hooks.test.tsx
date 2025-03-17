@@ -1,52 +1,99 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, renderHook, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
+import { renderHook, waitFor } from "@testing-library/react";
+import { AxiosStatic } from "axios";
+import React from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiProvider } from "../src/context";
 import { useFetch, useMutate } from "../src/hooks";
-import { ApiEndpoint, ApiRouteDefinition } from "../src/types";
-import React from "react";
-import axios from "axios";
+import type { ApiEndpoint, ApiRouteDefinition } from "../src/types";
 
-type UserEndpoint = ApiEndpoint<
-  { id: string; name: string }, // Response
-  { name: string }, // Body
-  {}, // Query
-  { id: string } // Params
->;
-
-// Mock API tree
-const mockApiTree: ApiRouteDefinition = {
+// Define API endpoints for tests
+interface TestApiTree extends ApiRouteDefinition {
+  "/users": {
+    GET: ApiEndpoint<{ users: Array<{ id: string; name: string }> }>;
+    POST: ApiEndpoint<{ id: string; name: string }, { name: string }>;
+  };
   "/users/[id]": {
-    GET: {} as UserEndpoint,
-    PUT: {} as UserEndpoint,
-  },
-};
-
-vi.mock("../src/generated/apiTree.gen", () => ({
-  ApiTree: mockApiTree,
-}));
-
-// Test component that uses both hooks
-function TestComponent({ id }: { id: string }) {
-  const { data } = useFetch("/users/[id]", {
-    params: { id },
-  });
-
-  const { mutate } = useMutate("/users/[id]", {
-    method: "PUT",
-    params: { id },
-  });
-
-  return (
-    <div>
-      <div data-testid="user-name">{data?.name}</div>
-      <button onClick={() => mutate({ name: "Updated" })}>Update</button>
-    </div>
-  );
+    GET: ApiEndpoint<{ id: string; name: string }, void, void, { id: string }>;
+    PUT: ApiEndpoint<
+      { id: string; name: string },
+      { name: string },
+      void,
+      { id: string }
+    >;
+  };
+  "/users/[userId]/posts": {
+    GET: ApiEndpoint<
+      Array<{ id: string; title: string }>,
+      void,
+      void,
+      { userId: string }
+    >;
+  };
 }
+
+// Augment the Register interface
+declare module "../src/types" {
+  interface Register {
+    //@ts-expect-error
+    apiTree: TestApiTree;
+  }
+}
+
+// Mock the ApiTree module
+vi.mock("../src/generated/apiTree.gen", () => {
+  const mockApiTree: TestApiTree = {
+    "/users": {
+      GET: {
+        method: "GET",
+        response: {} as { users: Array<{ id: string; name: string }> },
+        body: undefined,
+        query: undefined,
+        params: {} as Record<string, string>,
+      },
+      POST: {
+        method: "POST",
+        response: {} as { id: string; name: string },
+        body: {} as { name: string },
+        query: undefined,
+        params: {} as Record<string, string>,
+      },
+    },
+    "/users/[id]": {
+      GET: {
+        method: "GET",
+        response: {} as { id: string; name: string },
+        body: undefined,
+        query: undefined,
+        params: {} as { id: string },
+      },
+      PUT: {
+        method: "PUT",
+        response: {} as { id: string; name: string },
+        body: {} as { name: string },
+        query: undefined,
+        params: {} as { id: string },
+      },
+    },
+    "/users/[userId]/posts": {
+      GET: {
+        method: "GET",
+        response: {} as Array<{ id: string; title: string }>,
+        body: undefined,
+        query: undefined,
+        params: {} as { userId: string },
+      },
+    },
+  };
+
+  return {
+    ApiTree: mockApiTree,
+  };
+});
 
 describe("API Hooks Integration", () => {
   let queryClient: QueryClient;
+  let axiosInstance: AxiosStatic;
 
   beforeEach(() => {
     queryClient = new QueryClient({
@@ -57,92 +104,190 @@ describe("API Hooks Integration", () => {
       },
     });
 
-    // Mock the generated API tree module
-    vi.mock("../src/generated/apiTree.gen", () => ({
-      default: {
-        "/users/[id]": {
-          GET: {} as UserEndpoint,
-          PUT: {} as UserEndpoint,
-        },
+    // Create and mock axios instance
+    const mockInstance = {
+      request: vi.fn(),
+      get: vi.fn(),
+      post: vi.fn(),
+      put: vi.fn(),
+      delete: vi.fn(),
+      patch: vi.fn(),
+      head: vi.fn(),
+      options: vi.fn(),
+      defaults: {
+        headers: {},
+        transformRequest: [],
+        transformResponse: [],
+        timeout: 0,
+        adapter: vi.fn(),
+        xsrfCookieName: "",
+        xsrfHeaderName: "",
+        maxContentLength: 0,
+        maxBodyLength: 0,
+        env: {},
+        validateStatus: vi.fn(),
       },
-    }));
-  });
+      interceptors: {
+        request: { use: vi.fn(), eject: vi.fn(), clear: vi.fn() },
+        response: { use: vi.fn(), eject: vi.fn(), clear: vi.fn() },
+      },
+      getUri: vi.fn(),
+      create: vi.fn(),
+      Cancel: vi.fn(),
+      CancelToken: vi.fn(),
+      isCancel: vi.fn(),
+      VERSION: "1.0.0",
+      isAxiosError: vi.fn(),
+      spread: vi.fn(),
+      toFormData: vi.fn(),
+      formToJSON: vi.fn(),
+      mergeConfig: vi.fn(),
+      Axios: vi.fn(),
+      AxiosError: vi.fn(),
+      AxiosHeaders: vi.fn(),
+      FormSerializer: vi.fn(),
+      HttpStatusCode: {},
+    };
 
-  afterEach(() => {
-    queryClient.clear();
+    axiosInstance = mockInstance as unknown as AxiosStatic;
+
     vi.clearAllMocks();
   });
 
   const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>
-      <ApiProvider baseURL="https://api.example.com" client={axios}>
-        {children}
-      </ApiProvider>
-    </QueryClientProvider>
+    <ApiProvider
+      baseURL="http://api.example.com"
+      client={axiosInstance}
+      queryClient={queryClient}
+    >
+      {children}
+    </ApiProvider>
   );
 
   it("should fetch and display data", async () => {
-    const mockData = { id: "1", name: "John" };
-    vi.spyOn(axios, "get").mockResolvedValueOnce({
-      data: mockData,
-      status: 200,
-      statusText: "OK",
-      headers: {},
-      config: {} as any,
-    });
-
-    const { getByTestId } = render(<TestComponent id="1" />, { wrapper });
-
-    await waitFor(() => {
-      expect(getByTestId("user-name")).toHaveTextContent("John");
-    });
-  });
-
-  it("should handle fetch errors", async () => {
-    const error = new Error("Network error");
-    vi.spyOn(axios, "get").mockRejectedValueOnce(error);
+    const mockData = { users: [{ id: "1", name: "Test" }] };
+    (axiosInstance.get as any).mockResolvedValueOnce({ data: mockData });
 
     const { result } = renderHook(
       () =>
-        useFetch("/users/[id]", {
-          params: { id: "1" },
+        useFetch("/users", {
+          query: { filter: "active" },
         }),
       { wrapper }
     );
 
-    await waitFor(() => {
-      expect(result.current.error).toBeDefined();
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(axiosInstance.get).toHaveBeenCalledWith("/users", {
+      baseURL: "http://api.example.com",
+      params: { filter: "active" },
     });
+    expect(result.current.data).toEqual(mockData);
+  });
+
+  it("should handle fetch errors", async () => {
+    const error = new Error("Network error");
+    (axiosInstance.get as any).mockRejectedValueOnce(error);
+
+    const { result } = renderHook(() => useFetch("/users"), { wrapper });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error).toBe(error);
   });
 
   it("should handle mutations", async () => {
-    const mockResponse = { id: "1", name: "Updated" };
-    vi.spyOn(axios, "request").mockResolvedValueOnce({
+    const mockResponse = { id: "1", name: "Created User" };
+    (axiosInstance.request as any).mockResolvedValueOnce({
       data: mockResponse,
-      status: 200,
-      statusText: "OK",
-      headers: {},
-      config: {} as any,
     });
+
+    const onSuccess = vi.fn();
+    const onError = vi.fn();
+
+    const { result } = renderHook(
+      () =>
+        useMutate("/users", {
+          method: "POST",
+          onSuccess,
+          onError,
+        }),
+      { wrapper }
+    );
+
+    const variables = { name: "New User" };
+    result.current.mutate(variables);
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(axiosInstance.request).toHaveBeenCalledWith({
+      method: "post",
+      url: "/users",
+      baseURL: "http://api.example.com",
+      data: variables,
+    });
+    expect(onSuccess).toHaveBeenCalledWith(mockResponse, variables, undefined);
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  it("should handle mutation errors", async () => {
+    const error = new Error("Network error");
+    (axiosInstance.request as any).mockRejectedValueOnce(error);
+
+    const onSuccess = vi.fn();
+    const onError = vi.fn();
+
+    const { result } = renderHook(
+      () =>
+        useMutate("/users", {
+          method: "POST",
+          onSuccess,
+          onError,
+        }),
+      { wrapper }
+    );
+
+    const variables = { name: "New User" };
+    result.current.mutate(variables);
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    expect(onSuccess).not.toHaveBeenCalled();
+    expect(onError).toHaveBeenCalledWith(error, variables, undefined);
+  });
+
+  it("should throw error when path parameter is missing", () => {
+    expect(() =>
+      renderHook(
+        () =>
+          useFetch("/users/[id]", {
+            //@ts-expect-error - Testing error case with missing required param
+            params: {}, // Missing 'id' parameter
+          }),
+        { wrapper }
+      )
+    ).toThrow("Missing path parameter: id");
+  });
+
+  it("should handle path parameters in mutation requests", async () => {
+    const mockData = { id: "123", name: "Updated" };
+    (axiosInstance.request as any).mockResolvedValueOnce({ data: mockData });
 
     const { result } = renderHook(
       () =>
         useMutate("/users/[id]", {
           method: "PUT",
-          params: { id: "1" },
+          params: { id: "123" },
         }),
       { wrapper }
     );
 
     await result.current.mutateAsync({ name: "Updated" });
 
-    expect(axios.request).toHaveBeenCalledWith(
-      expect.objectContaining({
-        method: "put",
-        url: "/users/1",
-        baseURL: "https://api.example.com",
-        data: { name: "Updated" },
-      })
-    );
+    expect(axiosInstance.request).toHaveBeenCalledWith({
+      method: "put",
+      url: "/users/123",
+      baseURL: "http://api.example.com",
+      data: { name: "Updated" },
+    });
   });
 });

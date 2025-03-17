@@ -55,5 +55,6 @@ export type ExtractRouteParams<T extends string> = string extends T
 
 // Interface for registering API types
 export interface Register {
-  router: ApiContext;
+  router: ApiContext<ApiRouteDefinition>;
+  apiTree?: ApiRouteDefinition;
 }

@@ -32,7 +32,7 @@
   "scripts": {
     "dev": "tsup --watch",
     "build": "tsup",
-    "test": "vitest run",
+    "test": "vitest run --coverage",
     "test:watch": "vitest",
     "test:types": "tsx scripts/generate.ts && vitest --typecheck.only",
     "typecheck": "tsc --noEmit",
@@ -75,6 +75,7 @@
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
     "@vitejs/plugin-react": "^4.2.0",
+    "@vitest/coverage-v8": "^3.0.9",
     "axios": "^1.6.0",
     "eslint": "^8.0.0",
     "eslint-plugin-react": "^7.37.4",
