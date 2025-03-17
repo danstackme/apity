@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, renderHook, waitFor } from "@testing-library/react";
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ApiProvider } from "../src/context";
 import { useFetch, useMutate } from "../src/hooks";
-import { ApiEndpoint } from "../src/types";
+import { ApiEndpoint, ApiRouteDefinition } from "../src/types";
 import React from "react";
 import axios from "axios";
 
@@ -14,13 +14,25 @@ type UserEndpoint = ApiEndpoint<
   { id: string } // Params
 >;
 
+// Mock API tree
+const mockApiTree: ApiRouteDefinition = {
+  "/users/[id]": {
+    GET: {} as UserEndpoint,
+    PUT: {} as UserEndpoint,
+  },
+};
+
+vi.mock("../src/generated/apiTree.gen", () => ({
+  ApiTree: mockApiTree,
+}));
+
 // Test component that uses both hooks
 function TestComponent({ id }: { id: string }) {
-  const { data } = useFetch<"/users/[id]", UserEndpoint>("/users/[id]", {
+  const { data } = useFetch("/users/[id]", {
     params: { id },
   });
 
-  const { mutate } = useMutate<"/users/[id]", "PUT">("/users/[id]", {
+  const { mutate } = useMutate("/users/[id]", {
     method: "PUT",
     params: { id },
   });
@@ -44,6 +56,16 @@ describe("API Hooks Integration", () => {
         },
       },
     });
+
+    // Mock the generated API tree module
+    vi.mock("../src/generated/apiTree.gen", () => ({
+      default: {
+        "/users/[id]": {
+          GET: {} as UserEndpoint,
+          PUT: {} as UserEndpoint,
+        },
+      },
+    }));
   });
 
   afterEach(() => {
@@ -52,19 +74,21 @@ describe("API Hooks Integration", () => {
   });
 
   const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <ApiProvider
-      baseURL="https://api.example.com"
-      client={axios}
-      queryClient={queryClient}
-    >
-      {children}
-    </ApiProvider>
+    <QueryClientProvider client={queryClient}>
+      <ApiProvider baseURL="https://api.example.com" client={axios}>
+        {children}
+      </ApiProvider>
+    </QueryClientProvider>
   );
 
   it("should fetch and display data", async () => {
     const mockData = { id: "1", name: "John" };
     vi.spyOn(axios, "get").mockResolvedValueOnce({
       data: mockData,
+      status: 200,
+      statusText: "OK",
+      headers: {},
+      config: {} as any,
     });
 
     const { getByTestId } = render(<TestComponent id="1" />, { wrapper });
@@ -80,7 +104,7 @@ describe("API Hooks Integration", () => {
 
     const { result } = renderHook(
       () =>
-        useFetch<"/users/[id]", UserEndpoint>("/users/[id]", {
+        useFetch("/users/[id]", {
           params: { id: "1" },
         }),
       { wrapper }
@@ -95,11 +119,15 @@ describe("API Hooks Integration", () => {
     const mockResponse = { id: "1", name: "Updated" };
     vi.spyOn(axios, "request").mockResolvedValueOnce({
       data: mockResponse,
+      status: 200,
+      statusText: "OK",
+      headers: {},
+      config: {} as any,
     });
 
     const { result } = renderHook(
       () =>
-        useMutate<"/users/[id]", "PUT">("/users/[id]", {
+        useMutate("/users/[id]", {
           method: "PUT",
           params: { id: "1" },
         }),
