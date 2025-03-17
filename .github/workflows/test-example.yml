@@ -1,0 +1,26 @@
+name: Test Example Project
+on:
+  release:
+    types: [published]
+
+jobs:
+  test-example:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and run example test
+        run: |
+          # Build the Docker image
+          docker build -t apity-example-test -f .github/docker/example-test.Dockerfile .
+
+          # Run the container with the latest version
+          docker run --rm apity-example-test
+
+      - name: Check for type errors
+        run: |
+          # Run the container with type checking
+          docker run --rm apity-example-test npm run typecheck

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ApiProvider, useFetch, useMutate } from "@danstack/apity";
+import { ApiProvider, useFetch, useMutate } from "@danstackme/apity";
 import { GET as getPets, POST as createPet } from "./routes/pets";
 import { GET as getPetById, PUT as updatePet } from "./routes/pets._id_";
 import "./App.css";
@@ -106,7 +106,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ApiProvider baseURL="https://petstore.swagger.io/v2">
         <div className="app">
-          <h1>@danstack/apity OpenAPI Example</h1>
+          <h1>@danstackme/apity OpenAPI Example</h1>
           <div className="examples">
             <div className="example-section">
               <PetsListFileBasedExample />

@@ -2,10 +2,10 @@
 
 Type-safe API client generator for React applications with file-based routing and runtime validation.
 
-[![npm version](https://img.shields.io/npm/v/@danstack/apity.svg)](https://www.npmjs.com/package/@danstack/apity)
+[![npm version](https://img.shields.io/npm/v/@danstackme/apity.svg)](https://www.npmjs.com/package/@danstackme/apity)
 [![CI](https://github.com/danstack/apity/actions/workflows/ci.yml/badge.svg)](https://github.com/danstack/apity/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/danstack/apity/branch/main/graph/badge.svg)](https://codecov.io/gh/danstack/apity)
-[![npm downloads](https://img.shields.io/npm/dm/@danstack/apity.svg)](https://www.npmjs.com/package/@danstack/apity)
+[![npm downloads](https://img.shields.io/npm/dm/@danstackme/apity.svg)](https://www.npmjs.com/package/@danstackme/apity)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-18.0+-blue.svg)](https://reactjs.org/)
@@ -32,7 +32,7 @@ APity generates fully type-safe API clients with:
 ## Installation
 
 ```bash
-npm install @danstack/apity @tanstack/react-query axios zod
+npm install @danstackme/apity @tanstack/react-query axios zod
 ```
 
 ## Quick Start
@@ -43,7 +43,7 @@ If you have an existing OpenAPI/Swagger specification, you can quickly generate 
 
 ```bash
 # Install the package
-npm install @danstack/apity
+npm install @danstackme/apity
 
 # Generate API client from OpenAPI spec
 npx apity-import swagger.yaml
@@ -88,7 +88,7 @@ import { GET as getById, PUT } from "./routes/pets._id_";
 import { api } from "./generated-api";
 
 // Setup your API provider
-import { ApiProvider } from "@danstack/apity";
+import { ApiProvider } from "@danstackme/apity";
 
 function App() {
   return (
@@ -204,7 +204,7 @@ createApiEndpoint<
 ```typescript
 // src/routes/users/index.ts
 import { z } from "zod";
-import { createApiEndpoint } from "@danstack/apity";
+import { createApiEndpoint } from "@danstackme/apity";
 
 // Using Zod schemas (recommended for runtime validation)
 export const GET = createApiEndpoint({
@@ -276,7 +276,7 @@ export const SEARCH = createApiEndpoint<
 ```typescript
 // src/routes/users/[id]/index.ts
 import { z } from "zod";
-import { createApiEndpoint } from "@danstack/apity";
+import { createApiEndpoint } from "@danstackme/apity";
 
 // Example combining TypeScript types with Zod schemas
 interface UserWithDetails {
@@ -332,7 +332,7 @@ export const DELETE = createApiEndpoint<void>({
 
 ```typescript
 // src/api.ts
-import { createApi } from "@danstack/apity";
+import { createApi } from "@danstackme/apity";
 import type { ApiTree } from "./generated/apiTree.gen";
 
 export const api = createApi<ApiTree>({
@@ -343,7 +343,7 @@ export const api = createApi<ApiTree>({
 4. Use in your components:
 
 ```typescript
-import { useFetch, useMutate } from "@danstack/apity";
+import { useFetch, useMutate } from "@danstackme/apity";
 
 function UserComponent() {
   // TypeScript will infer all types correctly
@@ -400,7 +400,7 @@ You can also define your API inline without file-based routing:
 
 ```typescript
 import { z } from "zod";
-import { createApi } from "@danstack/apity";
+import { createApi } from "@danstackme/apity";
 
 const api = createApi({
   baseURL: "https://api.example.com",

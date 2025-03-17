@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   title: Pet Store API
   version: 1.0.0
-  description: A simple pet store API for demonstrating @danstack/apity
+  description: A simple pet store API for demonstrating @danstackme/apity
 
 servers:
   - url: https://petstore.swagger.io/v2
