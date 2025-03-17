@@ -8,7 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 export function watchEndpoints() {
-  const endpointsDir = resolve(process.cwd(), "endpoints");
+  const endpointsDir = resolve(process.cwd(), "src/endpoints");
 
   console.log("👀 Watching endpoints directory for changes...");
 

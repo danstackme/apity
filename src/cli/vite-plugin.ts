@@ -7,6 +7,4 @@ export const apityPlugin = (): PluginOption => ({
   configureServer() {
     watchEndpoints();
   },
-  enforce: "post",
-  hotUpdate: undefined,
 });
