@@ -4,7 +4,7 @@ import react from "@vitejs/plugin-react";
 import { apityPlugin } from "@danstackme/apity/vite";
 
 export default defineConfig({
-  plugins: [react(), apityPlugin()],
+  plugins: [react()],
   test: {
     environment: "jsdom",
     globals: true,
