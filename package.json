@@ -50,7 +50,7 @@
     "size": "size-limit",
     "release": "tsx scripts/release.ts",
     "prepare": "husky",
-    "postinstall": "apity-generate"
+    "postinstall": "tsx src/cli/generate.ts"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
