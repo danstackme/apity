@@ -9,7 +9,7 @@ export function watchEndpoints() {
   console.log("👀 Watching endpoints directory for changes...");
 
   watch(endpointsDir, {
-    ignored: /(^|[\/\\])\../, // ignore dotfiles
+    ignored: /(^|[/])\../, // ignore dotfiles
     persistent: true,
     ignoreInitial: true,
   }).on("all", (event, path) => {
