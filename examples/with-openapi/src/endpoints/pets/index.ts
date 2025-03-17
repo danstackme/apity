@@ -24,9 +24,4 @@ export const POST = {
 export const PATCH = {
   method: "PATCH",
   responseSchema: PetsSchema,
-  bodySchema: z.object({
-    title: z.string(),
-    content: z.string(),
-  }),
-  params: { id: z.string() },
 };
