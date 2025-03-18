@@ -18,11 +18,6 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs",
       "default": "./dist/index.js"
-    },
-    "./vite": {
-      "types": "./dist/cli/vite-plugin.d.ts",
-      "import": "./dist/cli/vite-plugin.js",
-      "default": "./dist/cli/vite-plugin.js"
     }
   },
   "files": [

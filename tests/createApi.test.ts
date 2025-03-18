@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { createApiEndpoint } from "../src/createApi";
 import { ApiEndpoints } from "../src/types";
+import { vi } from "vitest";
 
 describe("createApi", () => {
   const baseUrl = "https://api.example.com";
@@ -73,6 +74,342 @@ describe("createApi", () => {
     expect(api.client).toBe(customAxios);
     expect(api.queryClient).toBe(customQueryClient);
   });
+
+  it("should handle middleware configuration", () => {
+    const beforeMiddleware = (config: any) => config;
+    const afterMiddleware = (response: any) => response;
+    const errorMiddleware = (error: any) => Promise.reject(error);
+
+    const api = createApi({
+      baseUrl: "https://api.example.com",
+      endpoints: {},
+      middleware: {
+        before: beforeMiddleware,
+        after: afterMiddleware,
+        onError: errorMiddleware,
+      },
+    });
+
+    expect(api.middlewares).toHaveLength(3);
+    expect(api.middlewares).toContain(beforeMiddleware);
+    expect(api.middlewares).toContain(afterMiddleware);
+    expect(api.middlewares).toContain(errorMiddleware);
+  });
+
+  it("should configure provided client with baseUrl and headers", () => {
+    const customClient = axios.create();
+    const customHeaders = { "X-Custom-Header": "value" };
+
+    createApi({
+      baseUrl: "https://api.example.com",
+      endpoints: {},
+      client: customClient,
+      headers: customHeaders,
+    });
+
+    expect(customClient.defaults.baseURL).toBe("https://api.example.com");
+    expect(customClient.defaults.headers).toMatchObject(customHeaders);
+  });
+
+  it("should create new client with config when no client provided", () => {
+    const customHeaders = { "X-Custom-Header": "value" };
+    const api = createApi({
+      baseUrl: "https://api.example.com",
+      endpoints: {},
+      headers: customHeaders,
+    });
+
+    expect(api.client.defaults.baseURL).toBe("https://api.example.com");
+    expect(api.client.defaults.headers).toMatchObject(customHeaders);
+  });
+
+  it("should handle partial middleware configuration", () => {
+    const beforeMiddleware = (config: any) => config;
+
+    const api = createApi({
+      baseUrl: "https://api.example.com",
+      endpoints: {},
+      middleware: {
+        before: beforeMiddleware,
+      },
+    });
+
+    expect(api.middlewares).toHaveLength(1);
+    expect(api.middlewares).toContain(beforeMiddleware);
+  });
+
+  it("should handle error middleware separately", () => {
+    const errorMiddleware = (error: any) => Promise.reject(error);
+
+    const api = createApi({
+      baseUrl: "https://api.example.com",
+      endpoints: {},
+      middleware: {
+        onError: errorMiddleware,
+      },
+    });
+
+    expect(api.middlewares).toHaveLength(1);
+    expect(api.middlewares).toContain(errorMiddleware);
+  });
+
+  it("should handle response middleware separately", () => {
+    const afterMiddleware = (response: any) => response;
+
+    const api = createApi({
+      baseUrl: "https://api.example.com",
+      endpoints: {},
+      middleware: {
+        after: afterMiddleware,
+      },
+    });
+
+    expect(api.middlewares).toHaveLength(1);
+    expect(api.middlewares).toContain(afterMiddleware);
+  });
+
+  it("should create API with no middleware", () => {
+    const api = createApi({
+      baseUrl: "https://api.example.com",
+      endpoints: {},
+    });
+
+    expect(api.middlewares).toHaveLength(0);
+  });
+
+  it("should handle headers with existing client headers", () => {
+    const existingHeaders = { "Existing-Header": "value" };
+    const newHeaders = { "X-Custom-Header": "value" };
+    const customClient = axios.create({
+      headers: existingHeaders,
+    });
+
+    const api = createApi({
+      baseUrl: "https://api.example.com",
+      endpoints: {},
+      client: customClient,
+      headers: newHeaders,
+    });
+
+    expect(api.client.defaults.headers).toMatchObject({
+      ...existingHeaders,
+      ...newHeaders,
+    });
+  });
+
+  it("should properly configure interceptors", () => {
+    const beforeMiddleware = vi.fn((config) => config);
+    const afterMiddleware = vi.fn((response) => response);
+    const errorMiddleware = vi.fn((error) => Promise.reject(error));
+
+    const customClient = axios.create();
+    vi.spyOn(customClient.interceptors.request, "use");
+    vi.spyOn(customClient.interceptors.response, "use");
+
+    createApi({
+      baseUrl: "https://api.example.com",
+      endpoints: {},
+      client: customClient,
+      middleware: {
+        before: beforeMiddleware,
+        after: afterMiddleware,
+        onError: errorMiddleware,
+      },
+    });
+
+    expect(customClient.interceptors.request.use).toHaveBeenCalledWith(
+      beforeMiddleware
+    );
+    expect(customClient.interceptors.response.use).toHaveBeenCalledWith(
+      afterMiddleware
+    );
+    expect(customClient.interceptors.response.use).toHaveBeenCalledWith(
+      undefined,
+      errorMiddleware
+    );
+  });
+
+  it("should create new axios instance with correct defaults", () => {
+    const baseUrl = "https://api.example.com";
+    const headers = { "X-Custom-Header": "value" };
+
+    const api = createApi({
+      baseUrl,
+      endpoints: {},
+      headers,
+    });
+
+    expect(api.client.defaults.baseURL).toBe(baseUrl);
+    expect(api.client.defaults.headers).toMatchObject(headers);
+  });
+
+  it("should update existing client with new baseURL", () => {
+    const oldBaseUrl = "https://old.example.com";
+    const newBaseUrl = "https://new.example.com";
+    const customClient = axios.create({ baseURL: oldBaseUrl });
+
+    createApi({
+      baseUrl: newBaseUrl,
+      endpoints: {},
+      client: customClient,
+    });
+
+    expect(customClient.defaults.baseURL).toBe(newBaseUrl);
+  });
+
+  it("should create API with default QueryClient when not provided", () => {
+    const api = createApi({
+      baseUrl: "https://api.example.com",
+      endpoints: {},
+    });
+
+    expect(api.queryClient).toBeInstanceOf(QueryClient);
+  });
+
+  it("should preserve existing headers when updating client config", () => {
+    const existingHeaders = { Authorization: "Bearer token" };
+    const newHeaders = { "X-Custom-Header": "value" };
+    const customClient = axios.create({
+      headers: existingHeaders,
+    });
+
+    const api = createApi({
+      baseUrl: "https://api.example.com",
+      endpoints: {},
+      client: customClient,
+      headers: newHeaders,
+    });
+
+    expect(api.client.defaults.headers).toMatchObject({
+      ...existingHeaders,
+      ...newHeaders,
+    });
+  });
+
+  it("should handle client creation with no headers", () => {
+    const api = createApi({
+      baseUrl: "https://api.example.com",
+      endpoints: {},
+    });
+
+    expect(api.client.defaults.baseURL).toBe("https://api.example.com");
+    expect(api.client.defaults.headers).toBeDefined();
+  });
+
+  it("should handle client update with no headers", () => {
+    const customClient = axios.create();
+    const api = createApi({
+      baseUrl: "https://api.example.com",
+      endpoints: {},
+      client: customClient,
+    });
+
+    expect(api.client.defaults.baseURL).toBe("https://api.example.com");
+    expect(api.client.defaults.headers).toBeDefined();
+  });
+
+  it("should return correct API tree", () => {
+    const endpoints = {
+      "/test": [createApiEndpoint({ method: "GET" })],
+    };
+
+    const api = createApi({
+      baseUrl: "https://api.example.com",
+      endpoints,
+    });
+
+    expect(api.apiTree).toBe(endpoints);
+  });
+
+  it("should properly configure request interceptor", async () => {
+    const beforeMiddleware = vi.fn((config) => {
+      return {
+        ...config,
+        headers: { ...config.headers, "X-Modified": "true" },
+      };
+    });
+
+    const customClient = axios.create();
+    const requestSpy = vi.spyOn(customClient.interceptors.request, "use");
+
+    createApi({
+      baseUrl: "https://api.example.com",
+      endpoints: {},
+      client: customClient,
+      middleware: {
+        before: beforeMiddleware,
+      },
+    });
+
+    expect(requestSpy).toHaveBeenCalledWith(beforeMiddleware);
+    expect(beforeMiddleware).toHaveBeenCalledTimes(0);
+  });
+
+  it("should properly configure response interceptor", async () => {
+    const afterMiddleware = vi.fn((response) => ({
+      ...response,
+      data: { ...response.data, modified: true },
+    }));
+
+    const customClient = axios.create();
+    const responseSpy = vi.spyOn(customClient.interceptors.response, "use");
+
+    createApi({
+      baseUrl: "https://api.example.com",
+      endpoints: {},
+      client: customClient,
+      middleware: {
+        after: afterMiddleware,
+      },
+    });
+
+    expect(responseSpy).toHaveBeenCalledWith(afterMiddleware);
+    expect(afterMiddleware).toHaveBeenCalledTimes(0);
+  });
+
+  it("should properly configure error interceptor", async () => {
+    const errorMiddleware = vi.fn((err) => Promise.reject(err));
+
+    const customClient = axios.create();
+    const responseSpy = vi.spyOn(customClient.interceptors.response, "use");
+
+    createApi({
+      baseUrl: "https://api.example.com",
+      endpoints: {},
+      client: customClient,
+      middleware: {
+        onError: errorMiddleware,
+      },
+    });
+
+    expect(responseSpy).toHaveBeenCalledWith(undefined, errorMiddleware);
+    expect(errorMiddleware).toHaveBeenCalledTimes(0);
+  });
+
+  it("should configure all interceptors in correct order", () => {
+    const beforeMiddleware = vi.fn();
+    const afterMiddleware = vi.fn();
+    const errorMiddleware = vi.fn();
+
+    const customClient = axios.create();
+    const requestSpy = vi.spyOn(customClient.interceptors.request, "use");
+    const responseSpy = vi.spyOn(customClient.interceptors.response, "use");
+
+    createApi({
+      baseUrl: "https://api.example.com",
+      endpoints: {},
+      client: customClient,
+      middleware: {
+        before: beforeMiddleware,
+        after: afterMiddleware,
+        onError: errorMiddleware,
+      },
+    });
+
+    expect(requestSpy).toHaveBeenCalledWith(beforeMiddleware);
+    expect(responseSpy).toHaveBeenCalledWith(afterMiddleware);
+    expect(responseSpy).toHaveBeenCalledWith(undefined, errorMiddleware);
+  });
 });
 
 describe("createApiEndpoint", () => {
@@ -111,5 +448,80 @@ describe("createApiEndpoint", () => {
     expect(endpoint.response).toBeUndefined();
     expect(endpoint.body).toBeUndefined();
     expect(endpoint.query).toBeUndefined();
+  });
+
+  it("should create endpoint with all options", () => {
+    const responseSchema = z.object({ id: z.string() });
+    const bodySchema = z.object({ name: z.string() });
+    const querySchema = z.object({ filter: z.string() });
+
+    const endpoint = createApiEndpoint({
+      method: "POST",
+      response: responseSchema,
+      body: bodySchema,
+      query: querySchema,
+    });
+
+    expect(endpoint.method).toBe("POST");
+    expect(endpoint.response).toBe(responseSchema);
+    expect(endpoint.body).toBe(bodySchema);
+    expect(endpoint.query).toBe(querySchema);
+  });
+
+  it("should create endpoint with minimal options", () => {
+    const endpoint = createApiEndpoint({
+      method: "GET",
+    });
+
+    expect(endpoint.method).toBe("GET");
+    expect(endpoint.response).toBeUndefined();
+    expect(endpoint.body).toBeUndefined();
+    expect(endpoint.query).toBeUndefined();
+  });
+});
+
+describe("createApi middleware configuration", () => {
+  it("should handle undefined middleware", () => {
+    const api = createApi({
+      baseUrl: "https://api.example.com",
+      endpoints: {},
+      middleware: undefined,
+    });
+
+    expect(api.middlewares).toHaveLength(0);
+  });
+
+  it("should handle empty middleware object", () => {
+    const api = createApi({
+      baseUrl: "https://api.example.com",
+      endpoints: {},
+      middleware: {},
+    });
+
+    expect(api.middlewares).toHaveLength(0);
+  });
+
+  it("should handle all middleware types together", () => {
+    const beforeMiddleware = vi.fn((config) => config);
+    const afterMiddleware = vi.fn((response) => response);
+    const errorMiddleware = vi.fn((error) => Promise.reject(error));
+
+    const customClient = axios.create();
+
+    const api = createApi({
+      baseUrl: "https://api.example.com",
+      endpoints: {},
+      client: customClient,
+      middleware: {
+        before: beforeMiddleware,
+        after: afterMiddleware,
+        onError: errorMiddleware,
+      },
+    });
+
+    expect(api.middlewares).toContain(beforeMiddleware);
+    expect(api.middlewares).toContain(afterMiddleware);
+    expect(api.middlewares).toContain(errorMiddleware);
+    expect(api.middlewares).toHaveLength(3);
   });
 });

@@ -52,10 +52,19 @@ const getUserPostsEndpoint = createApiEndpoint({
   ),
 });
 
+const getUserPostWithIdEndpoint = createApiEndpoint({
+  method: "GET",
+  response: z.object({
+    id: z.string(),
+    title: z.string(),
+  }),
+});
+
 const apiEndpoints = {
   "/users": [usersEndpoint, createUserEndpoint],
   "/users/[id]": [getUserEndpoint, updateUserEndpoint],
   "/users/[userId]/posts": [getUserPostsEndpoint],
+  "/users/[userId]/posts/[postId]": [getUserPostWithIdEndpoint],
 };
 
 declare module "../src/types" {
@@ -233,5 +242,80 @@ describe("API Hooks Integration", () => {
       baseURL: "http://api.example.com",
       data: { name: "Updated" },
     });
+  });
+
+  it("should handle multiple path parameters in fetch requests", async () => {
+    const mockData = [{ id: "1", title: "Post 1" }];
+    (axiosInstance.get as any).mockResolvedValueOnce({ data: mockData });
+
+    const { result } = renderHook(
+      () =>
+        useFetch("/users/[userId]/posts", {
+          params: { userId: "123" },
+        }),
+      { wrapper }
+    );
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(axiosInstance.get).toHaveBeenCalledWith("/users/123/posts", {
+      baseURL: "http://api.example.com",
+    });
+    expect(result.current.data).toEqual(mockData);
+  });
+
+  it("should handle missing path parameter object", () => {
+    expect(() =>
+      renderHook(() => useFetch("/users/[id]"), { wrapper })
+    ).toThrow("Missing path parameter: id");
+  });
+
+  it("should handle path with no parameters", () => {
+    const { result } = renderHook(() => useFetch("/users"), { wrapper });
+
+    expect(result.current.isLoading).toBe(true);
+  });
+
+  it("should handle path with multiple parameters", async () => {
+    const mockData = { id: "1", title: "Test Post" };
+    (axiosInstance.get as any).mockResolvedValueOnce({ data: mockData });
+
+    const { result } = renderHook(
+      () =>
+        useFetch("/users/[userId]/posts/[postId]", {
+          params: { userId: "123", postId: "456" },
+        }),
+      { wrapper }
+    );
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(axiosInstance.get).toHaveBeenCalledWith("/users/123/posts/456", {
+      baseURL: "http://api.example.com",
+    });
+  });
+
+  it("should handle missing one of multiple parameters", () => {
+    expect(() =>
+      renderHook(
+        () =>
+          useFetch("/users/[userId]/posts/[postId]", {
+            params: { userId: "123" },
+          }),
+        { wrapper }
+      )
+    ).toThrow("Missing path parameter: postId");
+  });
+
+  it("should handle path with invalid parameter format", () => {
+    const { result } = renderHook(
+      () =>
+        useFetch("/users", {
+          params: { id: "123" },
+        }),
+      { wrapper }
+    );
+
+    expect(result.current.isLoading).toBe(true);
   });
 });

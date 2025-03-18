@@ -1,8 +1,7 @@
-import { defineConfig, Plugin } from "vite";
 import react from "@vitejs/plugin-react";
-import { apityPlugin } from "@danstackme/apity/vite";
+import { defineConfig } from "vite";
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), apityPlugin() as Plugin],
+  plugins: [react()],
 });
