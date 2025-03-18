@@ -50,7 +50,7 @@
     "size": "size-limit",
     "release": "npm run lint && tsx scripts/release.ts",
     "prepare": "husky",
-    "postinstall": "tsx src/cli/generate.ts"
+    "postinstall": "tsx src/cli/generate.ts || exit 0"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
@@ -84,6 +84,7 @@
     "openapi-typescript": "^6.7.4",
     "openapi-typescript-codegen": "^0.27.0",
     "swagger2openapi": "^7.0.8",
+    "tsx": "^4.7.1",
     "zod": "^3.0.0"
   },
   "devDependencies": {
@@ -109,7 +110,6 @@
     "prettier": "^3.2.5",
     "rimraf": "^5.0.5",
     "tsup": "^8.0.2",
-    "tsx": "^4.7.1",
     "typescript": "^5.3.3",
     "vite": "^6.2.2",
     "vitest": "^3.0.9"
