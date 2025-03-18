@@ -1,13 +1,9 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import fs from "fs/promises";
-import path from "path";
 import yaml from "yaml";
 import swagger2openapi from "swagger2openapi";
 import type { OpenAPIV3 } from "openapi-types";
-import { fileURLToPath } from "url";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 interface GenerateOptions {
   output: "file-based" | "single-file";

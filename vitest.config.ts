@@ -10,6 +10,11 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./tests/setup.ts"],
     include: ["tests/**/*.{test,spec}.{js,jsx,ts,tsx}"],
+    typecheck: {
+      enabled: true,
+      checker: "tsc",
+      tsconfig: "./tsconfig.json",
+    },
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html", "lcov"],
