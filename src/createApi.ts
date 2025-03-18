@@ -1,53 +1,68 @@
-import { QueryClient } from "@tanstack/react-query";
 import axios from "axios";
-import type {
-  ApiConfig,
-  ApiContext,
-  ApiEndpoint,
-  HttpMethod,
-  ApiRouteDefinition,
-} from "./types";
+import type { ApiConfig, ApiContext, ApiEndpoint } from "./types";
 import { z } from "zod";
+import { QueryClient } from "@tanstack/react-query";
 
-export function createApi<TApiTree extends ApiRouteDefinition>(
-  config: ApiConfig<TApiTree>
-): ApiContext<TApiTree> {
+export function createApiEndpoint<
+  TResponse = unknown,
+  TBody = unknown,
+  TQuery = unknown,
+>(config: {
+  method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
+  response?: z.ZodType<TResponse>;
+  body?: z.ZodType<TBody>;
+  query?: z.ZodType<TQuery>;
+}): ApiEndpoint<TResponse, TBody, TQuery> {
+  return {
+    ...config,
+    method: config.method,
+    response: config.response,
+    body: config.body,
+    query: config.query,
+  };
+}
+
+export function createApi(
+  config: ApiConfig
+): ApiContext & { middlewares: any[]; apiTree: any } {
   const client =
-    config.client ??
+    config.client ||
     axios.create({
       baseURL: config.baseUrl,
       headers: config.headers,
     });
 
-  const queryClient = config.queryClient ?? new QueryClient();
+  // If using a provided client, update its config
+  if (config.client) {
+    config.client.defaults.baseURL = config.baseUrl;
+    if (config.headers) {
+      Object.assign(config.client.defaults.headers, config.headers);
+    }
+  }
+
+  const middlewares: any[] = [];
+
+  // Add middleware if provided
+  if (config.middleware) {
+    if (config.middleware.before) {
+      client.interceptors.request.use(config.middleware.before);
+      middlewares.push(config.middleware.before);
+    }
+    if (config.middleware.after) {
+      client.interceptors.response.use(config.middleware.after);
+      middlewares.push(config.middleware.after);
+    }
+    if (config.middleware.onError) {
+      client.interceptors.response.use(undefined, config.middleware.onError);
+      middlewares.push(config.middleware.onError);
+    }
+  }
 
   return {
     client,
-    queryClient,
+    queryClient: config.queryClient ?? new QueryClient(),
     config,
-    middlewares: [],
-    apiTree: config.apiTree,
-  };
-}
-
-export function createApiEndpoint<
-  TResponse = unknown,
-  TBody = void,
-  TQuery = void,
-  TParams extends Record<string, string> = Record<string, string>,
->(config: {
-  method: HttpMethod;
-  responseSchema: z.ZodType<TResponse>;
-  bodySchema?: z.ZodType<TBody>;
-  querySchema?: z.ZodType<TQuery>;
-  paramSchema?: z.ZodType<TParams>;
-}): ApiEndpoint<TResponse, TBody, TQuery, TParams> {
-  return {
-    ...config,
-    method: config.method,
-    responseSchema: config.responseSchema,
-    bodySchema: config.bodySchema,
-    querySchema: config.querySchema,
-    paramSchema: config.paramSchema,
+    middlewares,
+    apiTree: config.endpoints,
   };
 }

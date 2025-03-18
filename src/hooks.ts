@@ -5,41 +5,40 @@ import {
   UseQueryOptions,
 } from "@tanstack/react-query";
 import { useApiContext } from "./context";
-import type {
-  ApiEndpoint,
-  ExtractRouteParams,
-  HttpMethod,
-  Register,
-} from "./types";
+import type { ExtractPathParams, ApiTree } from "./types";
 
-type ApiTree = Register["apiTree"];
+type Path = keyof ApiTree & string;
+type Method<P extends Path> = keyof ApiTree[P] & string;
 
 export function useFetch<
-  TPath extends keyof ApiTree & string,
-  TEndpoint extends ApiTree[TPath][HttpMethod],
+  TPath extends Path,
+  TMethod extends Extract<Method<TPath>, "GET">,
 >(
   path: TPath,
   options: Omit<
     UseQueryOptions<
-      TEndpoint extends ApiEndpoint<infer Response, any, any, any>
-        ? Response
-        : unknown,
+      ApiTree[TPath][TMethod]["response"],
       Error,
-      TEndpoint extends ApiEndpoint<infer Response, any, any, any>
-        ? Response
-        : unknown,
-      [string, ExtractRouteParams<TPath> | undefined, any]
+      ApiTree[TPath][TMethod]["response"],
+      [
+        string,
+        ExtractPathParams<TPath> | undefined,
+        ApiTree[TPath][TMethod]["query"] | undefined,
+      ]
     >,
     "queryKey" | "queryFn"
   > & {
-    params?: ExtractRouteParams<TPath>;
-    query?: TEndpoint extends ApiEndpoint<any, any, infer Query, any>
-      ? Query
-      : undefined;
+    params?: ExtractPathParams<TPath>;
+    query?: ApiTree[TPath][TMethod]["query"];
   } = {}
 ) {
   const { params, query, enabled = true, ...queryOptions } = options;
   const { client, config } = useApiContext();
+
+  if (path.includes("[") && (!params || Object.keys(params).length === 0)) {
+    throw new Error(`Missing path parameter: ${getParamName(path)}`);
+  }
+
   const url = interpolatePath(path, params || {});
 
   return useQuery({
@@ -57,45 +56,57 @@ export function useFetch<
 }
 
 export function useMutate<
-  TPath extends keyof ApiTree & string,
-  TMethod extends Exclude<HttpMethod, "GET">,
+  TPath extends Path,
+  TMethod extends Exclude<Method<TPath>, "GET">,
 >(
   path: TPath,
-  options: Omit<UseMutationOptions<any, Error, any, unknown>, "mutationFn"> & {
-    method: TMethod;
-    params?: ExtractRouteParams<TPath>;
-  }
+  options: Omit<
+    UseMutationOptions<
+      ApiTree[TPath][TMethod]["response"],
+      Error,
+      ApiTree[TPath][TMethod] extends { body: any }
+        ? ApiTree[TPath][TMethod]["body"]
+        : undefined
+    >,
+    "mutationFn"
+  > & {
+    params?: ExtractPathParams<TPath>;
+    method?: "post" | "put" | "patch" | "delete";
+  } = {}
 ) {
-  const { method, params, ...mutationOptions } = options;
+  const { params, method = "post", ...mutationOptions } = options;
   const { client, config } = useApiContext();
+
+  if (path.includes("[") && (!params || Object.keys(params).length === 0)) {
+    throw new Error(`Missing path parameter: ${getParamName(path)}`);
+  }
+
   const url = interpolatePath(path, params || {});
 
   return useMutation({
     ...mutationOptions,
-    mutationFn: async (body: any) => {
+    mutationFn: async (data: ApiTree[TPath][TMethod]["body"]) => {
       const response = await client.request({
-        method: method?.toLowerCase() || "post",
+        method,
         url,
         baseURL: config.baseUrl,
-        data: body,
+        data,
       });
       return response.data;
     },
   });
 }
 
-function interpolatePath(
-  path: string,
-  params: Record<string, string | undefined>
-): string {
-  if (!path || typeof path !== "string" || !path.includes("[")) {
-    return path;
-  }
+function getParamName(path: string): string {
+  const match = path.match(/\[([^\]]+)\]/);
+  return match ? match[1] : "";
+}
 
-  return path.replace(/\[([^\]]+)\]/g, (_, param) => {
-    if (!params || !(param in params) || params[param] === undefined) {
-      throw new Error(`Missing path parameter: ${param}`);
+function interpolatePath(path: string, params: Record<string, string>): string {
+  return path.replace(/\[([^\]]+)\]/g, (_, key) => {
+    if (!params[key]) {
+      throw new Error(`Missing path parameter: ${key}`);
     }
-    return params[param] as string;
+    return params[key];
   });
 }

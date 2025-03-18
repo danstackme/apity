@@ -1,55 +1,46 @@
+import { createApi } from "@danstackme/apity";
 import { QueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { createApi, createApiEndpoint } from "../src/createApi";
-import type { ApiRouteDefinition } from "../src/types";
+import { createApiEndpoint } from "../src/createApi";
+import { ApiEndpoints } from "../src/types";
 
 describe("createApi", () => {
   const baseUrl = "https://api.example.com";
   const headers = { "X-API-Key": "test-key" };
 
-  type TestApiTree = ApiRouteDefinition & {
-    users: {
-      get: typeof userEndpoint;
-      post: typeof createUserEndpoint;
-    };
-  };
-
   const userEndpoint = createApiEndpoint({
     method: "GET",
-    responseSchema: z.object({
+    response: z.object({
       id: z.number(),
       name: z.string(),
     }),
-    querySchema: z.object({
+    query: z.object({
       include: z.string().optional(),
     }),
   });
 
   const createUserEndpoint = createApiEndpoint({
     method: "POST",
-    responseSchema: z.object({
+    response: z.object({
       id: z.number(),
       name: z.string(),
     }),
-    bodySchema: z.object({
+    body: z.object({
       name: z.string(),
     }),
   });
 
-  const apiTree: TestApiTree = {
-    users: {
-      get: userEndpoint,
-      post: createUserEndpoint,
-    },
+  const apiTree: ApiEndpoints = {
+    "/users": [userEndpoint, createUserEndpoint],
   };
 
   it("should create an API context with default axios client", () => {
     const api = createApi({
       baseUrl,
       headers,
-      apiTree,
+      endpoints: apiTree,
     });
 
     expect(api.client).toBeDefined();
@@ -61,7 +52,7 @@ describe("createApi", () => {
     expect(api.config).toEqual({
       baseUrl,
       headers,
-      apiTree,
+      endpoints: apiTree,
     });
     expect(api.middlewares).toEqual([]);
     expect(api.apiTree).toBe(apiTree);
@@ -74,7 +65,7 @@ describe("createApi", () => {
     const api = createApi({
       baseUrl,
       headers,
-      apiTree,
+      endpoints: apiTree,
       client: customAxios,
       queryClient: customQueryClient,
     });
@@ -88,27 +79,27 @@ describe("createApiEndpoint", () => {
   it("should create a GET endpoint with query params", () => {
     const endpoint = createApiEndpoint({
       method: "GET",
-      responseSchema: z.object({ data: z.string() }),
-      querySchema: z.object({ filter: z.string() }),
+      response: z.object({ data: z.string() }),
+      query: z.object({ filter: z.string() }),
     });
 
     expect(endpoint.method).toBe("GET");
-    expect(endpoint.responseSchema).toBeDefined();
-    expect(endpoint.querySchema).toBeDefined();
-    expect(endpoint.bodySchema).toBeUndefined();
+    expect(endpoint.response).toBeDefined();
+    expect(endpoint.query).toBeDefined();
+    expect(endpoint.body).toBeUndefined();
   });
 
   it("should create a POST endpoint with body", () => {
     const endpoint = createApiEndpoint({
       method: "POST",
-      responseSchema: z.object({ id: z.number() }),
-      bodySchema: z.object({ name: z.string() }),
+      response: z.object({ id: z.number() }),
+      body: z.object({ name: z.string() }),
     });
 
     expect(endpoint.method).toBe("POST");
-    expect(endpoint.responseSchema).toBeDefined();
-    expect(endpoint.bodySchema).toBeDefined();
-    expect(endpoint.querySchema).toBeUndefined();
+    expect(endpoint.response).toBeDefined();
+    expect(endpoint.body).toBeDefined();
+    expect(endpoint.query).toBeUndefined();
   });
 
   it("should create an endpoint without schemas", () => {
@@ -117,8 +108,8 @@ describe("createApiEndpoint", () => {
     });
 
     expect(endpoint.method).toBe("DELETE");
-    expect(endpoint.responseSchema).toBeUndefined();
-    expect(endpoint.bodySchema).toBeUndefined();
-    expect(endpoint.querySchema).toBeUndefined();
+    expect(endpoint.response).toBeUndefined();
+    expect(endpoint.body).toBeUndefined();
+    expect(endpoint.query).toBeUndefined();
   });
 });

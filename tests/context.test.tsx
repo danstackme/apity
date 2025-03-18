@@ -10,13 +10,14 @@ describe("ApiProvider and useApiContext", () => {
   const baseURL = "https://api.example.com";
   const client = axios.create() as AxiosInstance;
   const queryClient = new QueryClient();
+  const config = { baseUrl: baseURL, endpoints: {} };
 
   it("should provide API context to children", () => {
     function TestComponent() {
       const context = useApiContext();
       return (
         <div>
-          <div data-testid="baseURL">{context.baseURL}</div>
+          <div data-testid="baseURL">{context.config.baseUrl}</div>
           <div data-testid="hasClient">
             {Boolean(context.client).toString()}
           </div>
@@ -28,7 +29,7 @@ describe("ApiProvider and useApiContext", () => {
     }
 
     render(
-      <ApiProvider baseURL={baseURL} client={client} queryClient={queryClient}>
+      <ApiProvider api={{ client, queryClient, config }}>
         <TestComponent />
       </ApiProvider>
     );
@@ -39,6 +40,9 @@ describe("ApiProvider and useApiContext", () => {
   });
 
   it("should use default axios and QueryClient when not provided", () => {
+    const defaultClient = axios.create();
+    const defaultQueryClient = new QueryClient();
+
     function TestComponent() {
       const context = useApiContext();
       return (
@@ -54,7 +58,9 @@ describe("ApiProvider and useApiContext", () => {
     }
 
     render(
-      <ApiProvider baseURL={baseURL}>
+      <ApiProvider
+        api={{ client: defaultClient, queryClient: defaultQueryClient, config }}
+      >
         <TestComponent />
       </ApiProvider>
     );
@@ -79,6 +85,7 @@ describe("ApiContext", () => {
   const baseURL = "https://api.example.com";
   const client = axios.create();
   const queryClient = new QueryClient();
+  const config = { baseUrl: baseURL, endpoints: {} };
 
   it("should throw error when useApiContext is used outside of ApiProvider", () => {
     expect(() => renderHook(() => useApiContext())).toThrow(
@@ -88,7 +95,7 @@ describe("ApiContext", () => {
 
   it("should provide api context when used within ApiProvider", () => {
     const wrapper = ({ children }: { children: React.ReactNode }) => (
-      <ApiProvider baseURL={baseURL} client={client} queryClient={queryClient}>
+      <ApiProvider api={{ client, queryClient, config }}>
         {children}
       </ApiProvider>
     );
@@ -96,9 +103,9 @@ describe("ApiContext", () => {
     const { result } = renderHook(() => useApiContext(), { wrapper });
 
     expect(result.current).toMatchObject({
-      baseURL,
       client: expect.any(Function),
       queryClient: expect.any(Object),
+      config: expect.objectContaining({ baseUrl: baseURL, endpoints: {} }),
     });
   });
 });

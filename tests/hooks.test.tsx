@@ -5,37 +5,62 @@ import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiProvider } from "../src/context";
 import { useFetch, useMutate } from "../src/hooks";
-import type { ApiEndpoint, ApiRouteDefinition } from "../src/types";
+import { z } from "zod";
+import { createApiEndpoint } from "../src/createApi";
 
 // Define API endpoints for tests
-interface TestApiTree extends ApiRouteDefinition {
-  "/users": {
-    GET: ApiEndpoint<{ users: Array<{ id: string; name: string }> }>;
-    POST: ApiEndpoint<{ id: string; name: string }, { name: string }>;
-  };
-  "/users/[id]": {
-    GET: ApiEndpoint<{ id: string; name: string }, void, void, { id: string }>;
-    PUT: ApiEndpoint<
-      { id: string; name: string },
-      { name: string },
-      void,
-      { id: string }
-    >;
-  };
-  "/users/[userId]/posts": {
-    GET: ApiEndpoint<
-      Array<{ id: string; title: string }>,
-      void,
-      void,
-      { userId: string }
-    >;
-  };
-}
+const userSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+});
 
-// Augment the Register interface
+const usersEndpoint = createApiEndpoint({
+  method: "GET",
+  response: z.object({
+    users: z.array(userSchema),
+  }),
+});
+
+const createUserEndpoint = createApiEndpoint({
+  method: "POST",
+  response: userSchema,
+  body: z.object({
+    name: z.string(),
+  }),
+});
+
+const getUserEndpoint = createApiEndpoint({
+  method: "GET",
+  response: userSchema,
+});
+
+const updateUserEndpoint = createApiEndpoint({
+  method: "PUT",
+  response: userSchema,
+  body: z.object({
+    name: z.string(),
+  }),
+});
+
+const getUserPostsEndpoint = createApiEndpoint({
+  method: "GET",
+  response: z.array(
+    z.object({
+      id: z.string(),
+      title: z.string(),
+    })
+  ),
+});
+
+const apiEndpoints = {
+  "/users": [usersEndpoint, createUserEndpoint],
+  "/users/[id]": [getUserEndpoint, updateUserEndpoint],
+  "/users/[userId]/posts": [getUserPostsEndpoint],
+};
+
 declare module "../src/types" {
   interface Register {
-    apiTree: TestApiTree & ApiRouteDefinition;
+    apiTree: typeof apiEndpoints;
   }
 }
 
@@ -80,9 +105,11 @@ describe("API Hooks Integration", () => {
 
   const wrapper = ({ children }: { children: React.ReactNode }) => (
     <ApiProvider
-      baseURL="http://api.example.com"
-      client={axiosInstance}
-      queryClient={queryClient}
+      api={{
+        client: axiosInstance,
+        queryClient: queryClient,
+        config: { baseUrl: "http://api.example.com", endpoints: apiEndpoints },
+      }}
     >
       {children}
     </ApiProvider>
@@ -92,19 +119,12 @@ describe("API Hooks Integration", () => {
     const mockData = { users: [{ id: "1", name: "Test" }] };
     (axiosInstance.get as any).mockResolvedValueOnce({ data: mockData });
 
-    const { result } = renderHook(
-      () =>
-        useFetch("/users", {
-          query: { filter: "active" },
-        }),
-      { wrapper }
-    );
+    const { result } = renderHook(() => useFetch("/users"), { wrapper });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(axiosInstance.get).toHaveBeenCalledWith("/users", {
       baseURL: "http://api.example.com",
-      params: { filter: "active" },
     });
     expect(result.current.data).toEqual(mockData);
   });
@@ -131,7 +151,7 @@ describe("API Hooks Integration", () => {
     const { result } = renderHook(
       () =>
         useMutate("/users", {
-          method: "POST",
+          method: "post",
           onSuccess,
           onError,
         }),
@@ -163,7 +183,7 @@ describe("API Hooks Integration", () => {
     const { result } = renderHook(
       () =>
         useMutate("/users", {
-          method: "POST",
+          method: "post",
           onSuccess,
           onError,
         }),
@@ -184,8 +204,8 @@ describe("API Hooks Integration", () => {
       renderHook(
         () =>
           useFetch("/users/[id]", {
-            //@ts-expect-error - Testing error case with missing required param
-            params: {}, // Missing 'id' parameter
+            // @ts-expect-error - This is a test for missing params
+            params: {},
           }),
         { wrapper }
       )
@@ -199,7 +219,7 @@ describe("API Hooks Integration", () => {
     const { result } = renderHook(
       () =>
         useMutate("/users/[id]", {
-          method: "PUT",
+          method: "put",
           params: { id: "123" },
         }),
       { wrapper }
