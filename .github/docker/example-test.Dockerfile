@@ -16,11 +16,14 @@ WORKDIR /app/example
 # Install tsx globally first
 RUN npm install -g tsx
 
-# Install dependencies
-RUN npm install
+# Clean npm cache and node_modules
+RUN rm -rf node_modules package-lock.json && npm cache clean --force
+
+# Install dependencies with platform flag
+RUN npm install --platform=linux
 
 # Install the latest version of our package
-RUN npm install @danstackme/apity@latest
+RUN npm install @danstackme/apity@latest --platform=linux
 
 # Build the project
 RUN npm run build
