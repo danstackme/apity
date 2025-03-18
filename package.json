@@ -48,7 +48,7 @@
     "prepublishOnly": "npm run clean && npm run build",
     "prepack": "npm run build",
     "size": "size-limit",
-    "release": "tsx scripts/release.ts",
+    "release": "npm run lint && tsx scripts/release.ts",
     "prepare": "husky",
     "postinstall": "tsx src/cli/generate.ts"
   },

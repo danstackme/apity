@@ -16,7 +16,9 @@ export function watchEndpoints() {
     persistent: true,
   }).on("change", () => {
     console.log(`Api endpoints havebeen changed. Regenerating types...`);
-    generateTypes();
+    generateTypes().catch((error) => {
+      console.error(`[apity] Error generating types:`, error);
+    });
   });
 }
 

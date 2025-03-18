@@ -9,5 +9,4 @@ const apityPlugin = (): PluginOption => ({
   },
 });
 
-export default apityPlugin;
 export { apityPlugin };

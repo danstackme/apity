@@ -20,3 +20,8 @@ export const POST = {
   }),
   params: { id: z.string() },
 };
+
+export const PATCH = {
+  method: "PATCH",
+  responseSchema: PetsSchema,
+};
