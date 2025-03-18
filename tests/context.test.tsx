@@ -17,9 +17,11 @@ describe("ApiProvider and useApiContext", () => {
       return (
         <div>
           <div data-testid="baseURL">{context.baseURL}</div>
-          <div data-testid="hasClient">{context.client ? "true" : "false"}</div>
+          <div data-testid="hasClient">
+            {Boolean(context.client).toString()}
+          </div>
           <div data-testid="hasQueryClient">
-            {context.queryClient ? "true" : "false"}
+            {Boolean(context.queryClient).toString()}
           </div>
         </div>
       );
@@ -41,9 +43,11 @@ describe("ApiProvider and useApiContext", () => {
       const context = useApiContext();
       return (
         <div>
-          <div data-testid="hasClient">{context.client ? "true" : "false"}</div>
+          <div data-testid="hasClient">
+            {Boolean(context.client).toString()}
+          </div>
           <div data-testid="hasQueryClient">
-            {context.queryClient ? "true" : "false"}
+            {Boolean(context.queryClient).toString()}
           </div>
         </div>
       );
@@ -65,41 +69,36 @@ describe("ApiProvider and useApiContext", () => {
       return null;
     }
 
-    expect(() => {
-      render(<TestComponent />);
-    }).toThrow("useApiContext must be used within an ApiProvider");
+    expect(() => render(<TestComponent />)).toThrow(
+      "useApiContext must be used within an ApiProvider"
+    );
   });
 });
 
 describe("ApiContext", () => {
   const baseURL = "https://api.example.com";
-  const client = axios.create() as AxiosInstance;
+  const client = axios.create();
   const queryClient = new QueryClient();
 
   it("should throw error when useApiContext is used outside of ApiProvider", () => {
-    expect(() => {
-      renderHook(() => useApiContext());
-    }).toThrow("useApiContext must be used within an ApiProvider");
+    expect(() => renderHook(() => useApiContext())).toThrow(
+      "useApiContext must be used within an ApiProvider"
+    );
   });
 
   it("should provide api context when used within ApiProvider", () => {
-    const { result } = renderHook(() => useApiContext(), {
-      wrapper: ({ children }) => (
-        <ApiProvider
-          baseURL={baseURL}
-          client={client}
-          queryClient={queryClient}
-        >
-          {children}
-        </ApiProvider>
-      ),
-    });
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <ApiProvider baseURL={baseURL} client={client} queryClient={queryClient}>
+        {children}
+      </ApiProvider>
+    );
+
+    const { result } = renderHook(() => useApiContext(), { wrapper });
 
     expect(result.current).toMatchObject({
       baseURL,
       client: expect.any(Function),
       queryClient: expect.any(Object),
-      apiTree: expect.any(Object),
     });
   });
 });

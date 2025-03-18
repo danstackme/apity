@@ -12,45 +12,34 @@ import type {
   Register,
 } from "./types";
 
-type ApiTree = Register["router"]["apiTree"];
-type PathOf<T> = keyof T & string;
-
-type UseFetchOptions<
-  TPath extends PathOf<ApiTree>,
-  TEndpoint extends ApiEndpoint<any, any, any, any>
-> = Omit<
-  UseQueryOptions<
-    TEndpoint extends ApiEndpoint<infer Response, any, any, any>
-      ? Response
-      : unknown,
-    Error,
-    TEndpoint extends ApiEndpoint<infer Response, any, any, any>
-      ? Response
-      : unknown,
-    [string, ExtractRouteParams<TPath> | undefined, any]
-  >,
-  "queryKey" | "queryFn"
-> & {
-  params?: ExtractRouteParams<TPath>;
-  query?: TEndpoint extends ApiEndpoint<any, any, infer Query, any>
-    ? Query
-    : undefined;
-};
-
-type UseMutateOptions<
-  TPath extends PathOf<ApiTree>,
-  TMethod extends HttpMethod
-> = Omit<UseMutationOptions<any, Error, any, unknown>, "mutationFn"> & {
-  method: TMethod;
-  params?: ExtractRouteParams<TPath>;
-};
+type ApiTree = Register["apiTree"];
 
 export function useFetch<
-  TPath extends PathOf<ApiTree>,
-  TEndpoint extends ApiEndpoint<any, any, any, any>
->(path: TPath, options: UseFetchOptions<TPath, TEndpoint> = {}) {
+  TPath extends keyof ApiTree & string,
+  TEndpoint extends ApiTree[TPath][HttpMethod],
+>(
+  path: TPath,
+  options: Omit<
+    UseQueryOptions<
+      TEndpoint extends ApiEndpoint<infer Response, any, any, any>
+        ? Response
+        : unknown,
+      Error,
+      TEndpoint extends ApiEndpoint<infer Response, any, any, any>
+        ? Response
+        : unknown,
+      [string, ExtractRouteParams<TPath> | undefined, any]
+    >,
+    "queryKey" | "queryFn"
+  > & {
+    params?: ExtractRouteParams<TPath>;
+    query?: TEndpoint extends ApiEndpoint<any, any, infer Query, any>
+      ? Query
+      : undefined;
+  } = {}
+) {
   const { params, query, enabled = true, ...queryOptions } = options;
-  const { client, baseURL } = useApiContext();
+  const { client, config } = useApiContext();
   const url = interpolatePath(path, params || {});
 
   return useQuery({
@@ -58,7 +47,7 @@ export function useFetch<
     queryKey: [path, params, query],
     queryFn: async () => {
       const response = await client.get(url, {
-        baseURL,
+        baseURL: config.baseUrl,
         params: query,
       });
       return response.data;
@@ -68,11 +57,17 @@ export function useFetch<
 }
 
 export function useMutate<
-  TPath extends PathOf<ApiTree>,
-  TMethod extends Exclude<HttpMethod, "GET">
->(path: TPath, options: UseMutateOptions<TPath, TMethod>) {
+  TPath extends keyof ApiTree & string,
+  TMethod extends Exclude<HttpMethod, "GET">,
+>(
+  path: TPath,
+  options: Omit<UseMutationOptions<any, Error, any, unknown>, "mutationFn"> & {
+    method: TMethod;
+    params?: ExtractRouteParams<TPath>;
+  }
+) {
   const { method, params, ...mutationOptions } = options;
-  const { client, baseURL } = useApiContext();
+  const { client, config } = useApiContext();
   const url = interpolatePath(path, params || {});
 
   return useMutation({
@@ -81,7 +76,7 @@ export function useMutate<
       const response = await client.request({
         method: method?.toLowerCase() || "post",
         url,
-        baseURL,
+        baseURL: config.baseUrl,
         data: body,
       });
       return response.data;
@@ -96,8 +91,6 @@ function interpolatePath(
   if (!path || typeof path !== "string" || !path.includes("[")) {
     return path;
   }
-
-  console.log(path, params);
 
   return path.replace(/\[([^\]]+)\]/g, (_, param) => {
     if (!params || !(param in params) || params[param] === undefined) {

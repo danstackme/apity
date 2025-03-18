@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { createApiEndpoint } from "@danstackme/apity";
 
 const PetsSchema = z.object({
   id: z.string(),
@@ -6,17 +7,17 @@ const PetsSchema = z.object({
   content: z.string(),
 });
 
-export const GET = {
+export const GET = createApiEndpoint({
   method: "GET",
   responseSchema: z.array(PetsSchema),
-};
+});
 
-export const POST = {
+export const POST = createApiEndpoint({
   method: "POST",
   responseSchema: PetsSchema,
   bodySchema: z.object({
     title: z.string(),
     content: z.string(),
   }),
-  params: { id: z.string() },
-};
+  paramSchema: z.object({ id: z.string() }),
+});

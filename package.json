@@ -50,7 +50,7 @@
     "size": "size-limit",
     "release": "npm run lint && tsx scripts/release.ts",
     "prepare": "husky",
-    "postinstall": "tsx src/cli/generate.ts || exit 0"
+    "postinstall": "tsx scripts/generate.ts || exit 0"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
@@ -75,6 +75,9 @@
     "zod": "^3.0.0"
   },
   "dependencies": {
+    "@babel/parser": "^7.26.10",
+    "@babel/traverse": "^7.26.10",
+    "@babel/types": "^7.26.10",
     "@tanstack/react-query": "^5.0.0",
     "chokidar": "^3.5.3",
     "commander": "^12.0.0",

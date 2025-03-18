@@ -34,18 +34,20 @@ export function createApiEndpoint<
   TResponse = unknown,
   TBody = void,
   TQuery = void,
-  TParams extends Record<string, string> = Record<string, string>
+  TParams extends Record<string, string> = Record<string, string>,
 >(config: {
   method: HttpMethod;
-  responseSchema?: z.ZodType<TResponse>;
+  responseSchema: z.ZodType<TResponse>;
   bodySchema?: z.ZodType<TBody>;
   querySchema?: z.ZodType<TQuery>;
+  paramSchema?: z.ZodType<TParams>;
 }): ApiEndpoint<TResponse, TBody, TQuery, TParams> {
   return {
     ...config,
-    response: {} as TResponse,
-    body: {} as TBody,
-    query: {} as TQuery,
-    params: {} as TParams,
+    method: config.method,
+    responseSchema: config.responseSchema,
+    bodySchema: config.bodySchema,
+    querySchema: config.querySchema,
+    paramSchema: config.paramSchema,
   };
 }

@@ -1,27 +1,36 @@
-import { AxiosInstance, AxiosRequestConfig } from "axios";
+import { z } from "zod";
 import { QueryClient } from "@tanstack/react-query";
+import { AxiosInstance } from "axios";
 
-export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+export type HttpMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
 
-export type ApiEndpoint<
+export interface ApiEndpoint<
   TResponse = unknown,
-  TBody = void,
-  TQuery = void,
-  TParams extends Record<string, string> = Record<string, string>
-> = {
-  response: TResponse;
-  body: TBody;
-  query: TQuery;
-  params: TParams;
+  TBody = unknown,
+  TQuery = unknown,
+  TParams = unknown,
+> {
   method: HttpMethod;
-};
+  responseSchema: z.ZodType<TResponse>;
+  bodySchema?: z.ZodType<TBody>;
+  querySchema?: z.ZodType<TQuery>;
+  paramSchema?: z.ZodType<TParams>;
+}
 
-export type ApiEndpointGroup = {
-  [K in HttpMethod]?: ApiEndpoint<any, any, any, any>;
-};
+export type ExtractRouteParams<T extends string> = string extends T
+  ? Record<string, string>
+  : T extends `${string}[${infer Param}]${infer Rest}`
+    ? { [K in Param | keyof ExtractRouteParams<Rest>]: string }
+    : Record<string, never>;
+
+export interface Register {
+  apiTree: ApiRouteDefinition;
+}
 
 export type ApiRouteDefinition = {
-  [path: string]: ApiEndpointGroup;
+  [path: string]: {
+    [method in HttpMethod]?: ApiEndpoint;
+  };
 };
 
 export interface ApiConfig<TApiTree extends ApiRouteDefinition> {
@@ -32,29 +41,23 @@ export interface ApiConfig<TApiTree extends ApiRouteDefinition> {
   apiTree: TApiTree;
 }
 
-export type Middleware = (
-  config: AxiosRequestConfig
-) => AxiosRequestConfig | Promise<AxiosRequestConfig>;
-
-export interface ApiContext<
-  TApiTree extends ApiRouteDefinition = ApiRouteDefinition
-> {
+export interface ApiContext<TApiTree extends ApiRouteDefinition> {
   client: AxiosInstance;
   queryClient: QueryClient;
   config: ApiConfig<TApiTree>;
-  middlewares: Middleware[];
+  middlewares: any[];
   apiTree: TApiTree;
 }
 
-// Type helpers for path parameters
-export type ExtractRouteParams<T extends string> = string extends T
-  ? Record<string, string>
-  : T extends `${string}[${infer Param}]${infer Rest}`
-  ? { [K in Param | keyof ExtractRouteParams<Rest>]: string }
-  : {};
-
-// Interface for registering API types
-export interface Register {
-  router: ApiContext<ApiRouteDefinition>;
-  apiTree?: ApiRouteDefinition;
+export interface ApiRoute<
+  TResponse = unknown,
+  TBody = unknown,
+  TQuery = unknown,
+  TParams = unknown,
+> {
+  method: HttpMethod;
+  response: z.ZodType<TResponse>;
+  body?: z.ZodType<TBody>;
+  query?: z.ZodType<TQuery>;
+  params?: z.ZodType<TParams>;
 }

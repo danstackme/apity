@@ -14,8 +14,12 @@ export function watchEndpoints() {
   watch(endpointsDir, {
     ignored: /(^|[/])\../, // ignore dotfiles
     persistent: true,
+    awaitWriteFinish: {
+      stabilityThreshold: 300,
+      pollInterval: 100,
+    },
   }).on("change", () => {
-    console.log(`Api endpoints havebeen changed. Regenerating types...`);
+    console.log(`Api endpoints have been changed. Regenerating types...`);
     generateTypes().catch((error) => {
       console.error(`[apity] Error generating types:`, error);
     });

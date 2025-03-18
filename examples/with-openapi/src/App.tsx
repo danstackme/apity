@@ -1,11 +1,8 @@
-import { ApiProvider, useFetch, useMutate, createApi } from "@danstackme/apity";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ApiProvider, createApi, useFetch, useMutate } from "@danstackme/apity";
+import { QueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import "./App.css";
 import type { ApiTree } from "./generated/apiTree.gen";
-
-// Create a client
-const queryClient = new QueryClient();
 
 const api = createApi({
   baseUrl: "https://petstore.swagger.io/v2",
@@ -20,7 +17,7 @@ declare module "@danstackme/apity" {
 
 // Example components using file-based routing
 function PetsListFileBasedExample() {
-  const { data, isLoading, error } = useFetch("/pets");
+  const { data } = useFetch("/");
 
   if (isLoading) return <div>Loading...</div>;
   if (error) return <div>Error: {error.message}</div>;
@@ -109,7 +106,11 @@ function CreatePetForm() {
 
 function App() {
   return (
-    <ApiProvider baseURL="https://petstore.swagger.io/v2">
+    <ApiProvider
+      baseURL={api.config.baseUrl}
+      client={api.client}
+      queryClient={api.queryClient}
+    >
       <div className="app">
         <h1>@danstackme/apity OpenAPI Example</h1>
         <div className="examples">

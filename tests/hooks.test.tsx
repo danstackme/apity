@@ -1,6 +1,6 @@
 import { QueryClient } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
-import { AxiosStatic } from "axios";
+import { AxiosInstance } from "axios";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiProvider } from "../src/context";
@@ -35,14 +35,13 @@ interface TestApiTree extends ApiRouteDefinition {
 // Augment the Register interface
 declare module "../src/types" {
   interface Register {
-    //@ts-expect-error - Need to implement generic type for apiTree
-    apiTree: TestApiTree;
+    apiTree: TestApiTree & ApiRouteDefinition;
   }
 }
 
 describe("API Hooks Integration", () => {
   let queryClient: QueryClient;
-  let axiosInstance: AxiosStatic;
+  let axiosInstance: AxiosInstance;
 
   beforeEach(() => {
     queryClient = new QueryClient({
@@ -53,52 +52,28 @@ describe("API Hooks Integration", () => {
       },
     });
 
-    // Create and mock axios instance
-    const mockInstance = {
-      request: vi.fn(),
+    // Create a mock axios instance
+    axiosInstance = {
       get: vi.fn(),
       post: vi.fn(),
       put: vi.fn(),
       delete: vi.fn(),
       patch: vi.fn(),
-      head: vi.fn(),
-      options: vi.fn(),
-      defaults: {
-        headers: {},
-        transformRequest: [],
-        transformResponse: [],
-        timeout: 0,
-        adapter: vi.fn(),
-        xsrfCookieName: "",
-        xsrfHeaderName: "",
-        maxContentLength: 0,
-        maxBodyLength: 0,
-        env: {},
-        validateStatus: vi.fn(),
-      },
+      request: vi.fn(),
+      defaults: {},
       interceptors: {
         request: { use: vi.fn(), eject: vi.fn(), clear: vi.fn() },
         response: { use: vi.fn(), eject: vi.fn(), clear: vi.fn() },
       },
       getUri: vi.fn(),
+      head: vi.fn(),
+      options: vi.fn(),
       create: vi.fn(),
-      Cancel: vi.fn(),
-      CancelToken: vi.fn(),
-      isCancel: vi.fn(),
-      VERSION: "1.0.0",
       isAxiosError: vi.fn(),
+      isCancel: vi.fn(),
+      all: vi.fn(),
       spread: vi.fn(),
-      toFormData: vi.fn(),
-      formToJSON: vi.fn(),
-      mergeConfig: vi.fn(),
-      Axios: vi.fn(),
-      AxiosError: vi.fn(),
-      AxiosHeaders: vi.fn(),
-      FormSerializer: vi.fn(),
-      HttpStatusCode: {},
-    };
-
-    axiosInstance = mockInstance as unknown as AxiosStatic;
+    } as unknown as AxiosInstance;
 
     vi.clearAllMocks();
   });
