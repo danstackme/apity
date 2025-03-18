@@ -1,4 +1,4 @@
-import { createApi } from "@danstackme/apity";
+import { createApi } from "../src/createApi";
 import { QueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { describe, expect, it } from "vitest";
