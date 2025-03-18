@@ -29,6 +29,7 @@ export default defineConfig({
         "tsup.config.ts",
         "src/generated/**",
         "src/types.ts",
+        "src/cli/watch.ts",
       ],
       include: ["src/**/*.{ts,tsx}"],
       all: true,
