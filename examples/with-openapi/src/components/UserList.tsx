@@ -1,5 +1,12 @@
 import { useFetch, useMutate } from "@danstackme/apity";
-import type {} from "../endpoints/users";
+import type { Register } from "@danstackme/apity";
+import type { api } from "../endpoints/users";
+
+declare module "@danstackme/apity" {
+  interface Register {
+    apiTree: typeof api.apiTree;
+  }
+}
 
 export function UserList() {
   const { data: users, isLoading } = useFetch("/users", {
@@ -9,7 +16,7 @@ export function UserList() {
     },
   });
 
-  const { mutate: createUser, isPending: isCreating } = useMutate("/users", {
+  const { mutate: createUser, isPending: isCreating } = useMutate("/", {
     method: "post",
   });
 

@@ -8,7 +8,7 @@ import "@danstackme/apity";
 // Augment the Register interface with our API type
 declare module "@danstackme/apity" {
   interface Register {
-    api: typeof api;
+    apiTree: typeof api.config.endpoints;
   }
 }
 

@@ -5,10 +5,10 @@ import {
   UseQueryOptions,
 } from "@tanstack/react-query";
 import { useApiContext } from "./context";
-import type { ExtractPathParams, ApiTree } from "./types";
+import type { ExtractPathParams, Endpoints } from "./types";
 
-type Path = keyof ApiTree & string;
-type Method<P extends Path> = keyof ApiTree[P] & string;
+type Path = keyof Endpoints & string;
+type Method<P extends Path> = keyof Endpoints[P] & string;
 
 export function useFetch<
   TPath extends Path,
@@ -17,19 +17,19 @@ export function useFetch<
   path: TPath,
   options: Omit<
     UseQueryOptions<
-      ApiTree[TPath][TMethod]["response"],
+      Endpoints[TPath][TMethod]["response"],
       Error,
-      ApiTree[TPath][TMethod]["response"],
+      Endpoints[TPath][TMethod]["response"],
       [
         string,
         ExtractPathParams<TPath> | undefined,
-        ApiTree[TPath][TMethod]["query"] | undefined,
+        Endpoints[TPath][TMethod]["query"] | undefined,
       ]
     >,
     "queryKey" | "queryFn"
   > & {
     params?: ExtractPathParams<TPath>;
-    query?: ApiTree[TPath][TMethod]["query"];
+    query?: Endpoints[TPath][TMethod]["query"];
   } = {}
 ) {
   const { params, query, enabled = true, ...queryOptions } = options;
@@ -62,10 +62,10 @@ export function useMutate<
   path: TPath,
   options: Omit<
     UseMutationOptions<
-      ApiTree[TPath][TMethod]["response"],
+      Endpoints[TPath][TMethod]["response"],
       Error,
-      ApiTree[TPath][TMethod] extends { body: any }
-        ? ApiTree[TPath][TMethod]["body"]
+      Endpoints[TPath][TMethod] extends { body: any }
+        ? Endpoints[TPath][TMethod]["body"]
         : undefined
     >,
     "mutationFn"
@@ -85,7 +85,7 @@ export function useMutate<
 
   return useMutation({
     ...mutationOptions,
-    mutationFn: async (data: ApiTree[TPath][TMethod]["body"]) => {
+    mutationFn: async (data: Endpoints[TPath][TMethod]["body"]) => {
       const response = await client.request({
         method,
         url,

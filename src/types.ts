@@ -16,7 +16,7 @@ export interface ApiEndpoint<
 }
 
 export type ApiEndpoints = {
-  [path: string]: ApiEndpoint[];
+  [path: string]: ApiEndpoint[] | readonly ApiEndpoint[];
 };
 
 export interface ApiConfig {
@@ -36,13 +36,15 @@ export interface ApiContext {
   client: AxiosInstance;
   queryClient: QueryClient;
   config: ApiConfig;
+  middleware: ((config: any) => any)[];
+  endpoints: ApiEndpoints;
 }
 
 export interface Register {
   // null for now
 }
 
-export type ApiTree = Register extends { apiTree: infer T } ? T : never;
+export type Endpoints = Register extends { endpoints: infer T } ? T : never;
 
 // Helper type to extract path parameters from a URL pattern
 export type ExtractPathParams<T extends string> = string extends T

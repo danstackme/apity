@@ -1,7 +1,8 @@
-import axios from "axios";
-import type { ApiConfig, ApiContext, ApiEndpoint } from "./types";
 import { z } from "zod";
 import { QueryClient } from "@tanstack/react-query";
+import axios from "axios";
+import { ApiConfig, ApiEndpoints, ApiContext } from "./types";
+import { ApiEndpoint } from "./types";
 
 export function createApiEndpoint<
   TResponse = unknown,
@@ -22,47 +23,44 @@ export function createApiEndpoint<
   };
 }
 
-export function createApi(
+export function createApi<T extends ApiEndpoints>(
   config: ApiConfig
-): ApiContext & { middlewares: any[]; apiTree: any } {
-  const client =
-    config.client ||
-    axios.create({
-      baseURL: config.baseUrl,
-      headers: config.headers,
-    });
+): ApiContext {
+  const queryClient = config.queryClient || new QueryClient();
+  const client = config.client || axios.create();
 
-  // If using a provided client, update its config
-  if (config.client) {
-    config.client.defaults.baseURL = config.baseUrl;
-    if (config.headers) {
-      Object.assign(config.client.defaults.headers, config.headers);
-    }
+  // Configure client
+  client.defaults.baseURL = config.baseUrl;
+
+  // Set headers directly on the client's headers object
+  if (config.headers) {
+    Object.assign(client.defaults.headers, config.headers);
   }
 
-  const middlewares: any[] = [];
+  // Initialize middleware array
+  const middlewareFns: ((config: any) => any)[] = [];
 
-  // Add middleware if provided
+  // Add middleware functions to array if they exist
   if (config.middleware) {
     if (config.middleware.before) {
+      middlewareFns.push(config.middleware.before);
       client.interceptors.request.use(config.middleware.before);
-      middlewares.push(config.middleware.before);
     }
     if (config.middleware.after) {
+      middlewareFns.push(config.middleware.after);
       client.interceptors.response.use(config.middleware.after);
-      middlewares.push(config.middleware.after);
     }
     if (config.middleware.onError) {
+      middlewareFns.push(config.middleware.onError);
       client.interceptors.response.use(undefined, config.middleware.onError);
-      middlewares.push(config.middleware.onError);
     }
   }
 
   return {
     client,
-    queryClient: config.queryClient ?? new QueryClient(),
+    queryClient,
     config,
-    middlewares,
-    apiTree: config.endpoints,
+    middleware: middlewareFns,
+    endpoints: config.endpoints as T,
   };
 }

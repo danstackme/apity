@@ -33,7 +33,7 @@ describe("createApi", () => {
     }),
   });
 
-  const apiTree: ApiEndpoints = {
+  const endpoints: ApiEndpoints = {
     "/users": [userEndpoint, createUserEndpoint],
   };
 
@@ -41,7 +41,7 @@ describe("createApi", () => {
     const api = createApi({
       baseUrl,
       headers,
-      endpoints: apiTree,
+      endpoints,
     });
 
     expect(api.client).toBeDefined();
@@ -53,10 +53,10 @@ describe("createApi", () => {
     expect(api.config).toEqual({
       baseUrl,
       headers,
-      endpoints: apiTree,
+      endpoints,
     });
-    expect(api.middlewares).toEqual([]);
-    expect(api.apiTree).toBe(apiTree);
+    expect(api.middleware).toEqual([]);
+    expect(api.endpoints).toBe(endpoints);
   });
 
   it("should use provided axios client and query client", () => {
@@ -66,7 +66,7 @@ describe("createApi", () => {
     const api = createApi({
       baseUrl,
       headers,
-      endpoints: apiTree,
+      endpoints: endpoints,
       client: customAxios,
       queryClient: customQueryClient,
     });
@@ -90,10 +90,10 @@ describe("createApi", () => {
       },
     });
 
-    expect(api.middlewares).toHaveLength(3);
-    expect(api.middlewares).toContain(beforeMiddleware);
-    expect(api.middlewares).toContain(afterMiddleware);
-    expect(api.middlewares).toContain(errorMiddleware);
+    expect(api.middleware).toHaveLength(3);
+    expect(api.middleware).toContain(beforeMiddleware);
+    expect(api.middleware).toContain(afterMiddleware);
+    expect(api.middleware).toContain(errorMiddleware);
   });
 
   it("should configure provided client with baseUrl and headers", () => {
@@ -134,8 +134,8 @@ describe("createApi", () => {
       },
     });
 
-    expect(api.middlewares).toHaveLength(1);
-    expect(api.middlewares).toContain(beforeMiddleware);
+    expect(api.middleware).toHaveLength(1);
+    expect(api.middleware).toContain(beforeMiddleware);
   });
 
   it("should handle error middleware separately", () => {
@@ -149,8 +149,8 @@ describe("createApi", () => {
       },
     });
 
-    expect(api.middlewares).toHaveLength(1);
-    expect(api.middlewares).toContain(errorMiddleware);
+    expect(api.middleware).toHaveLength(1);
+    expect(api.middleware).toContain(errorMiddleware);
   });
 
   it("should handle response middleware separately", () => {
@@ -164,8 +164,8 @@ describe("createApi", () => {
       },
     });
 
-    expect(api.middlewares).toHaveLength(1);
-    expect(api.middlewares).toContain(afterMiddleware);
+    expect(api.middleware).toHaveLength(1);
+    expect(api.middleware).toContain(afterMiddleware);
   });
 
   it("should create API with no middleware", () => {
@@ -174,7 +174,7 @@ describe("createApi", () => {
       endpoints: {},
     });
 
-    expect(api.middlewares).toHaveLength(0);
+    expect(api.middleware).toHaveLength(0);
   });
 
   it("should handle headers with existing client headers", () => {
@@ -318,7 +318,7 @@ describe("createApi", () => {
       endpoints,
     });
 
-    expect(api.apiTree).toBe(endpoints);
+    expect(api.endpoints).toBe(endpoints);
   });
 
   it("should properly configure request interceptor", async () => {
@@ -488,7 +488,7 @@ describe("createApi middleware configuration", () => {
       middleware: undefined,
     });
 
-    expect(api.middlewares).toHaveLength(0);
+    expect(api.middleware).toHaveLength(0);
   });
 
   it("should handle empty middleware object", () => {
@@ -498,7 +498,7 @@ describe("createApi middleware configuration", () => {
       middleware: {},
     });
 
-    expect(api.middlewares).toHaveLength(0);
+    expect(api.middleware).toHaveLength(0);
   });
 
   it("should handle all middleware types together", () => {
@@ -519,9 +519,9 @@ describe("createApi middleware configuration", () => {
       },
     });
 
-    expect(api.middlewares).toContain(beforeMiddleware);
-    expect(api.middlewares).toContain(afterMiddleware);
-    expect(api.middlewares).toContain(errorMiddleware);
-    expect(api.middlewares).toHaveLength(3);
+    expect(api.middleware).toContain(beforeMiddleware);
+    expect(api.middleware).toContain(afterMiddleware);
+    expect(api.middleware).toContain(errorMiddleware);
+    expect(api.middleware).toHaveLength(3);
   });
 });

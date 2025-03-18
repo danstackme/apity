@@ -1,3 +1,4 @@
+import { ApiEndpoints } from "./../../node_modules/@danstackme/apity/src/types";
 import { z } from "zod";
 import { createApi, createApiEndpoint } from "@danstackme/apity";
 import { AxiosRequestConfig, AxiosError } from "axios";
@@ -21,69 +22,43 @@ const QuerySchema = z.object({
   offset: z.number().optional(),
 });
 
-export type ApiEndpoints = {
-  "/users": {
-    GET: {
-      response: z.infer<typeof UsersResponseSchema>;
-      query: z.infer<typeof QuerySchema>;
-    };
-    POST: {
-      response: z.infer<typeof UserSchema>;
-      body: z.infer<typeof CreateUserSchema>;
-    };
-  };
-  "/users/:id": {
-    GET: {
-      response: z.infer<typeof UserSchema>;
-    };
-    PUT: {
-      response: z.infer<typeof UserSchema>;
-      body: z.infer<typeof CreateUserSchema>;
-    };
-    DELETE: {
-      response: void;
-    };
-  };
-};
+const getUsersEndpoint = createApiEndpoint({
+  method: "GET",
+  response: UsersResponseSchema,
+  query: QuerySchema,
+});
 
-declare module "@danstackme/apity" {
-  interface Register {
-    apiTree: ApiEndpoints;
-  }
-}
+const createUserEndpoint = createApiEndpoint({
+  method: "POST",
+  response: UserSchema,
+  body: CreateUserSchema,
+});
+
+const getUserEndpoint = createApiEndpoint({
+  method: "GET",
+  response: UserSchema,
+});
+
+const updateUserEndpoint = createApiEndpoint({
+  method: "PUT",
+  response: UserSchema,
+  body: CreateUserSchema,
+});
+
+const deleteUserEndpoint = createApiEndpoint({
+  method: "DELETE",
+  response: z.void(),
+});
+
+const apiEndpoints: ApiEndpoints = {
+  "/users": [getUsersEndpoint, createUserEndpoint],
+  "/users/:id": [getUserEndpoint, updateUserEndpoint, deleteUserEndpoint],
+} as const;
 
 // Create and export the API instance
 export const api = createApi({
   baseUrl: "https://api.example.com",
-  endpoints: {
-    "/users": [
-      createApiEndpoint({
-        method: "GET",
-        response: UsersResponseSchema,
-        query: QuerySchema,
-      }),
-      createApiEndpoint({
-        method: "POST",
-        response: UserSchema,
-        body: CreateUserSchema,
-      }),
-    ],
-    "/users/:id": [
-      createApiEndpoint({
-        method: "GET",
-        response: UserSchema,
-      }),
-      createApiEndpoint({
-        method: "PUT",
-        response: UserSchema,
-        body: CreateUserSchema,
-      }),
-      createApiEndpoint({
-        method: "DELETE",
-        response: z.void(),
-      }),
-    ],
-  },
+  endpoints: apiEndpoints,
   middleware: {
     before: (config: AxiosRequestConfig) => {
       // Add authentication header

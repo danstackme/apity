@@ -1,12 +1,12 @@
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
-import { AxiosInstance } from "axios";
+import axios from "axios";
 import React from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ApiProvider } from "../src/context";
-import { useFetch, useMutate } from "../src/hooks";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { createApiEndpoint } from "../src/createApi";
+import { ApiProvider } from "../src/context";
+import { createApi, createApiEndpoint } from "../src/createApi";
+import { useFetch, useMutate } from "../src/hooks";
 
 // Define API endpoints for tests
 const userSchema = z.object({
@@ -65,17 +65,37 @@ const apiEndpoints = {
   "/users/[id]": [getUserEndpoint, updateUserEndpoint],
   "/users/[userId]/posts": [getUserPostsEndpoint],
   "/users/[userId]/posts/[postId]": [getUserPostWithIdEndpoint],
-};
+} as const;
 
 declare module "../src/types" {
   interface Register {
-    apiTree: typeof apiEndpoints;
+    endpoints: typeof apiEndpoints;
   }
 }
 
+// Mock axios
+vi.mock("axios", () => ({
+  default: {
+    create: vi.fn(() => ({
+      defaults: {
+        baseURL: "",
+        headers: { common: {} },
+      },
+      get: vi.fn(),
+      post: vi.fn(),
+      request: vi.fn(),
+      interceptors: {
+        request: { use: vi.fn() },
+        response: { use: vi.fn() },
+      },
+    })),
+  },
+}));
+
 describe("API Hooks Integration", () => {
   let queryClient: QueryClient;
-  let axiosInstance: AxiosInstance;
+  let axiosInstance: ReturnType<typeof axios.create>;
+  let wrapper: React.FC<{ children: React.ReactNode }>;
 
   beforeEach(() => {
     queryClient = new QueryClient({
@@ -86,43 +106,37 @@ describe("API Hooks Integration", () => {
       },
     });
 
-    // Create a mock axios instance
-    axiosInstance = {
-      get: vi.fn(),
-      post: vi.fn(),
-      put: vi.fn(),
-      delete: vi.fn(),
-      patch: vi.fn(),
-      request: vi.fn(),
-      defaults: {},
-      interceptors: {
-        request: { use: vi.fn(), eject: vi.fn(), clear: vi.fn() },
-        response: { use: vi.fn(), eject: vi.fn(), clear: vi.fn() },
-      },
-      getUri: vi.fn(),
-      head: vi.fn(),
-      options: vi.fn(),
-      create: vi.fn(),
-      isAxiosError: vi.fn(),
-      isCancel: vi.fn(),
-      all: vi.fn(),
-      spread: vi.fn(),
-    } as unknown as AxiosInstance;
+    axiosInstance = axios.create();
 
-    vi.clearAllMocks();
+    // Setup successful responses
+    (axiosInstance.get as any).mockResolvedValue({
+      data: { users: [{ id: "1", name: "John" }] },
+    });
+    (axiosInstance.post as any).mockResolvedValue({
+      data: { id: "1", name: "John" },
+    });
+    (axiosInstance.request as any).mockResolvedValue({
+      data: { id: "1", name: "John" },
+    });
+
+    const api = createApi({
+      baseUrl: "http://api.example.com",
+      queryClient,
+      client: axiosInstance,
+      endpoints: apiEndpoints,
+    });
+
+    wrapper = ({ children }) => (
+      <QueryClientProvider client={queryClient}>
+        <ApiProvider api={api}>{children}</ApiProvider>
+      </QueryClientProvider>
+    );
   });
 
-  const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <ApiProvider
-      api={{
-        client: axiosInstance,
-        queryClient: queryClient,
-        config: { baseUrl: "http://api.example.com", endpoints: apiEndpoints },
-      }}
-    >
-      {children}
-    </ApiProvider>
-  );
+  afterEach(() => {
+    vi.clearAllMocks();
+    queryClient.clear();
+  });
 
   it("should fetch and display data", async () => {
     const mockData = { users: [{ id: "1", name: "Test" }] };
