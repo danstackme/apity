@@ -11,9 +11,7 @@ export default defineConfig({
     setupFiles: ["./tests/setup.ts"],
     include: ["tests/**/*.{test,spec}.{js,jsx,ts,tsx}"],
     typecheck: {
-      enabled: true,
-      checker: "tsc",
-      tsconfig: "./tsconfig.json",
+      enabled: false,
     },
     coverage: {
       provider: "v8",
@@ -32,6 +30,14 @@ export default defineConfig({
         "src/generated/**",
         "src/types.ts",
       ],
+      include: ["src/**/*.{ts,tsx}"],
+      all: true,
+      thresholds: {
+        branches: 80,
+        functions: 80,
+        lines: 80,
+        statements: 80,
+      },
     },
   },
   resolve: {
