@@ -1,14 +1,11 @@
 import { ApiProvider } from "@danstackme/apity";
 import "./App.css";
 import { UserList } from "./components/UserList";
-import { api } from "./endpoints/users";
+import { api, endpoints } from "./endpoints";
 
-import "@danstackme/apity";
-
-// Augment the Register interface with our API type
 declare module "@danstackme/apity" {
   interface Register {
-    apiTree: typeof api.config.endpoints;
+    endpoints: typeof endpoints;
   }
 }
 

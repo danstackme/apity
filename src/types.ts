@@ -5,18 +5,21 @@ import { AxiosInstance } from "axios";
 export type HttpMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
 
 export interface ApiEndpoint<
+  TMethod extends HttpMethod,
   TResponse = unknown,
   TBody = unknown,
   TQuery = unknown,
 > {
-  method: HttpMethod;
-  response?: z.ZodType<TResponse>;
-  body?: z.ZodType<TBody>;
-  query?: z.ZodType<TQuery>;
+  method: TMethod;
+  response?: z.ZodType<TResponse> | TResponse;
+  body?: z.ZodType<TBody> | TBody;
+  query?: z.ZodType<TQuery> | TQuery;
 }
 
 export type ApiEndpoints = {
-  [path: string]: ApiEndpoint[] | readonly ApiEndpoint[];
+  [path: string]:
+    | ApiEndpoint<HttpMethod>[]
+    | readonly ApiEndpoint<HttpMethod>[];
 };
 
 export interface ApiConfig {
@@ -47,13 +50,12 @@ export interface Register {
 export type Endpoints = Register extends { endpoints: infer T } ? T : never;
 
 // Helper type to extract path parameters from a URL pattern
-export type ExtractPathParams<T extends string> = string extends T
-  ? Record<string, string>
-  : T extends `${string}[${infer Param}]${infer Rest}`
-    ? { [K in Param | keyof ExtractPathParams<Rest>]: string }
-    : T extends `${string}[${infer Param}]`
-      ? { [K in Param]: string }
-      : {};
+export type ExtractPathParams<TPath extends string> =
+  TPath extends `${string}[${infer Param}]${infer Rest}`
+    ? { [K in Param]: string } & (Rest extends `${string}[${string}]${string}`
+        ? ExtractPathParams<Rest>
+        : {})
+    : {};
 
 // Helper type for hook parameters
 export interface FetchParams<TQuery, TParams> {

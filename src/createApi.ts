@@ -1,26 +1,32 @@
 import { z } from "zod";
 import { QueryClient } from "@tanstack/react-query";
 import axios from "axios";
-import { ApiConfig, ApiEndpoints, ApiContext } from "./types";
-import { ApiEndpoint } from "./types";
+import {
+  ApiConfig,
+  ApiEndpoints,
+  ApiContext,
+  ApiEndpoint,
+  HttpMethod,
+} from "./types";
 
 export function createApiEndpoint<
+  TMethod extends HttpMethod,
   TResponse = unknown,
   TBody = unknown,
   TQuery = unknown,
 >(config: {
-  method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
-  response?: z.ZodType<TResponse>;
-  body?: z.ZodType<TBody>;
-  query?: z.ZodType<TQuery>;
-}): ApiEndpoint<TResponse, TBody, TQuery> {
+  method: TMethod;
+  response?: z.ZodType<TResponse> | TResponse;
+  body?: z.ZodType<TBody> | TBody;
+  query?: z.ZodType<TQuery> | TQuery;
+}): ApiEndpoint<TMethod, TResponse, TBody, TQuery> {
   return {
     ...config,
     method: config.method,
     response: config.response,
     body: config.body,
     query: config.query,
-  };
+  } as const;
 }
 
 export function createApi<T extends ApiEndpoints>(

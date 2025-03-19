@@ -1,24 +1,23 @@
-import { ApiEndpoints } from "./../../node_modules/@danstackme/apity/src/types";
 import { z } from "zod";
-import { createApi, createApiEndpoint } from "@danstackme/apity";
+import { ApiEndpoints, createApi, createApiEndpoint } from "@danstackme/apity";
 import { AxiosRequestConfig, AxiosError } from "axios";
 
 // Define your Zod schemas
-const UserSchema = z.object({
+export const UserSchema = z.object({
   id: z.string(),
   name: z.string(),
   email: z.string().email(),
 });
 
-const UsersResponseSchema = z.array(UserSchema);
+export const UsersResponseSchema = z.array(UserSchema);
 
-const CreateUserSchema = z.object({
+export const CreateUserSchema = z.object({
   name: z.string(),
   email: z.string().email(),
 });
 
-const QuerySchema = z.object({
-  limit: z.number().optional(),
+export const QuerySchema = z.object({
+  limit: z.number(),
   offset: z.number().optional(),
 });
 
@@ -37,6 +36,7 @@ const createUserEndpoint = createApiEndpoint({
 const getUserEndpoint = createApiEndpoint({
   method: "GET",
   response: UserSchema,
+  query: QuerySchema,
 });
 
 const updateUserEndpoint = createApiEndpoint({
@@ -50,15 +50,15 @@ const deleteUserEndpoint = createApiEndpoint({
   response: z.void(),
 });
 
-const apiEndpoints: ApiEndpoints = {
+export const endpoints = {
   "/users": [getUsersEndpoint, createUserEndpoint],
-  "/users/:id": [getUserEndpoint, updateUserEndpoint, deleteUserEndpoint],
+  "/users/[id]": [getUserEndpoint, updateUserEndpoint, deleteUserEndpoint],
 } as const;
 
 // Create and export the API instance
 export const api = createApi({
   baseUrl: "https://api.example.com",
-  endpoints: apiEndpoints,
+  endpoints,
   middleware: {
     before: (config: AxiosRequestConfig) => {
       // Add authentication header

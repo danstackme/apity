@@ -1,27 +1,18 @@
 import { useFetch, useMutate } from "@danstackme/apity";
-import type { Register } from "@danstackme/apity";
-import type { api } from "../endpoints/users";
-
-declare module "@danstackme/apity" {
-  interface Register {
-    apiTree: typeof api.apiTree;
-  }
-}
 
 export function UserList() {
-  const { data: users, isLoading } = useFetch("/users", {
-    query: {
-      limit: 10,
-      offset: 0,
+  const { data: users, isLoading } = useFetch("/users/[id]", {
+    params: {
+      id: "1",
     },
   });
 
-  const { mutate: createUser, isPending: isCreating } = useMutate("/", {
+  const { mutate: createUser, isPending: isCreating } = useMutate("/users", {
     method: "post",
   });
 
-  const { mutate: deleteUser } = useMutate("/users/:id", {
-    method: "post",
+  const { mutate: deleteUser } = useMutate("/users/[id]", {
+    method: "delete",
   });
 
   if (isLoading) {
@@ -67,15 +58,15 @@ export function UserList() {
         <button
           type="submit"
           disabled={isCreating}
-          className="bg-blue-500 text-white px-4 py-2 rounded disabled:opacity-50"
+          className="bg-blue-500 text-white px-4 py-2 rounded"
         >
           {isCreating ? "Creating..." : "Create User"}
         </button>
       </form>
 
-      {/* Users list */}
+      {/* User list */}
       <div className="space-y-4">
-        {users?.map((user) => (
+        {users?.map((user: { id: string; name: string; email: string }) => (
           <div
             key={user.id}
             className="flex items-center justify-between border p-4 rounded"
@@ -85,7 +76,7 @@ export function UserList() {
               <p className="text-gray-600">{user.email}</p>
             </div>
             <button
-              onClick={() => deleteUser({ params: user.id })}
+              onClick={() => deleteUser({ params: { id: user.id } })}
               className="text-red-500 hover:text-red-700"
             >
               Delete

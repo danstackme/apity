@@ -2,11 +2,6 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { AxiosInstance } from "axios";
 import { createContext, useContext } from "react";
 import type { ApiContext as ApiContextType } from "./types";
-import type { Register } from "./types";
-
-export type ApiTree = Register extends { apiTree: any }
-  ? Register["apiTree"]
-  : never;
 
 interface ApiContextValue {
   client: AxiosInstance;

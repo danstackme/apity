@@ -5,34 +5,62 @@ import {
   UseQueryOptions,
 } from "@tanstack/react-query";
 import { useApiContext } from "./context";
-import type { ExtractPathParams, Endpoints } from "./types";
+import type {
+  ExtractPathParams,
+  Endpoints,
+  ApiEndpoint,
+  HttpMethod,
+} from "./types";
 
 type Path = keyof Endpoints & string;
 type Method<P extends Path> = keyof Endpoints[P] & string;
 
-export function useFetch<
-  TPath extends Path,
-  TMethod extends Extract<Method<TPath>, "GET">,
->(
+type EndpointByMethod<TPath extends Path, TMethod extends HttpMethod> = Extract<
+  Endpoints[TPath][number],
+  ApiEndpoint<TMethod, any, any, any>
+>;
+
+type HasRequiredProperties<T> = T extends object
+  ? keyof {
+      [K in keyof T as T[K] extends undefined ? never : K]: K;
+    } extends never
+    ? false
+    : true
+  : false;
+
+type HasPathParams<T extends string> = T extends `${string}[${string}]${string}`
+  ? true
+  : false;
+
+type OptionalQueryParams<TPath extends Path> = {
+  query?: EndpointByMethod<TPath, "GET">["query"];
+};
+
+type RequiredQueryParams<TPath extends Path> = {
+  query: EndpointByMethod<TPath, "GET">["query"];
+};
+
+export function useFetch<TPath extends Path>(
   path: TPath,
-  options: Omit<
+  options?: Omit<
     UseQueryOptions<
-      Endpoints[TPath][TMethod]["response"],
+      EndpointByMethod<TPath, "GET">["response"],
       Error,
-      Endpoints[TPath][TMethod]["response"],
-      [
-        string,
-        ExtractPathParams<TPath> | undefined,
-        Endpoints[TPath][TMethod]["query"] | undefined,
-      ]
+      EndpointByMethod<TPath, "GET">["response"],
+      any
     >,
     "queryKey" | "queryFn"
   > & {
-    params?: ExtractPathParams<TPath>;
-    query?: Endpoints[TPath][TMethod]["query"];
-  } = {}
+    params: HasPathParams<TPath> extends true
+      ? ExtractPathParams<TPath>
+      : never;
+  } & (HasRequiredProperties<
+      EndpointByMethod<TPath, "GET">["query"]
+    > extends true
+      ? RequiredQueryParams<TPath>
+      : OptionalQueryParams<TPath>)
 ) {
-  const { params, query, enabled = true, ...queryOptions } = options;
+  const { params, query, enabled = true, ...queryOptions } = options || {};
   const { client, config } = useApiContext();
 
   if (path.includes("[") && (!params || Object.keys(params).length === 0)) {
