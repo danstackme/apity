@@ -1,14 +1,13 @@
-import { z } from "zod";
 import { QueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import {
   ApiConfig,
-  ApiEndpoints,
   ApiContext,
-  ApiEndpoint,
+  FetchEndpoint,
   HttpMethod,
+  MutateEndpoint,
 } from "./types";
-
+import { z } from "zod";
 export function createApiEndpoint<
   TMethod extends HttpMethod,
   TResponse = unknown,
@@ -16,22 +15,28 @@ export function createApiEndpoint<
   TQuery = unknown,
 >(config: {
   method: TMethod;
-  response?: z.ZodType<TResponse> | TResponse;
-  body?: z.ZodType<TBody> | TBody;
-  query?: z.ZodType<TQuery> | TQuery;
-}): ApiEndpoint<TMethod, TResponse, TBody, TQuery> {
+  response: z.ZodType<TResponse>;
+  body?: z.ZodType<TBody>;
+  query?: z.ZodType<TQuery>;
+}): TMethod extends "GET"
+  ? FetchEndpoint<TResponse, TBody, TQuery>
+  : TMethod extends Exclude<HttpMethod, "GET">
+    ? MutateEndpoint<TMethod, TResponse, TBody, TQuery>
+    : never {
   return {
     ...config,
     method: config.method,
     response: config.response,
     body: config.body,
     query: config.query,
-  } as const;
+  } as TMethod extends "GET"
+    ? FetchEndpoint<TResponse, TBody, TQuery>
+    : TMethod extends Exclude<HttpMethod, "GET">
+      ? MutateEndpoint<TMethod, TResponse, TBody, TQuery>
+      : never;
 }
 
-export function createApi<T extends ApiEndpoints>(
-  config: ApiConfig
-): ApiContext {
+export function createApi(config: ApiConfig): ApiContext {
   const queryClient = config.queryClient || new QueryClient();
   const client = config.client || axios.create();
 
@@ -67,6 +72,7 @@ export function createApi<T extends ApiEndpoints>(
     queryClient,
     config,
     middleware: middlewareFns,
-    endpoints: config.endpoints as T,
+    fetchEndpoints: config.fetchEndpoints,
+    mutateEndpoints: config.mutateEndpoints,
   };
 }

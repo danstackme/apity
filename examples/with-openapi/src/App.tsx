@@ -1,11 +1,12 @@
 import { ApiProvider } from "@danstackme/apity";
 import "./App.css";
 import { UserList } from "./components/UserList";
-import { api, endpoints } from "./endpoints";
+import { api, fetchEndpoints, mutateEndpoints } from "./endpoints";
 
 declare module "@danstackme/apity" {
   interface Register {
-    endpoints: typeof endpoints;
+    fetchEndpoints: typeof fetchEndpoints;
+    mutateEndpoints: typeof mutateEndpoints;
   }
 }
 

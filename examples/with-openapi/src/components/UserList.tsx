@@ -1,10 +1,9 @@
 import { useFetch, useMutate } from "@danstackme/apity";
 
 export function UserList() {
-  const { data: users, isLoading } = useFetch("/users/[id]", {
-    params: {
-      id: "1",
-    },
+  const { data: users, isLoading } = useFetch({
+    path: "/users/[id]",
+    params: { id: 1 },
   });
 
   const { mutate: createUser, isPending: isCreating } = useMutate("/users", {

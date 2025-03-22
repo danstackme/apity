@@ -1,4 +1,5 @@
-export { useFetch, useMutate } from "./hooks";
+export { useFetch } from "./useFetch";
+export { useMutate } from "./useMutate";
 export { ApiProvider, useApiContext } from "./context";
 export type {
   ApiEndpoint,
@@ -6,5 +7,7 @@ export type {
   Register,
   ApiEndpoints,
   ApiConfig,
+  FetchEndpoint,
+  MutateEndpoint,
 } from "./types";
 export { createApiEndpoint, createApi } from "./createApi";
