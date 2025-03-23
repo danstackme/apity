@@ -33,15 +33,20 @@ describe("createApi", () => {
     }),
   });
 
-  const endpoints: ApiEndpoints = {
-    "/users": [userEndpoint, createUserEndpoint],
+  const fetchEndpoints: ApiEndpoints = {
+    "/users": [userEndpoint],
+  };
+
+  const mutateEndpoints: ApiEndpoints = {
+    "/users": [createUserEndpoint],
   };
 
   it("should create an API context with default axios client", () => {
     const api = createApi({
       baseUrl,
       headers,
-      endpoints,
+      fetchEndpoints,
+      mutateEndpoints,
     });
 
     expect(api.client).toBeDefined();
@@ -53,10 +58,12 @@ describe("createApi", () => {
     expect(api.config).toEqual({
       baseUrl,
       headers,
-      endpoints,
+      fetchEndpoints,
+      mutateEndpoints,
     });
     expect(api.middleware).toEqual([]);
-    expect(api.endpoints).toBe(endpoints);
+    expect(api.fetchEndpoints).toBe(fetchEndpoints);
+    expect(api.mutateEndpoints).toBe(mutateEndpoints);
   });
 
   it("should use provided axios client and query client", () => {
@@ -66,7 +73,8 @@ describe("createApi", () => {
     const api = createApi({
       baseUrl,
       headers,
-      endpoints: endpoints,
+      fetchEndpoints,
+      mutateEndpoints,
       client: customAxios,
       queryClient: customQueryClient,
     });
@@ -82,7 +90,8 @@ describe("createApi", () => {
 
     const api = createApi({
       baseUrl: "https://api.example.com",
-      endpoints: {},
+      fetchEndpoints: {},
+      mutateEndpoints: {},
       middleware: {
         before: beforeMiddleware,
         after: afterMiddleware,
@@ -102,7 +111,8 @@ describe("createApi", () => {
 
     createApi({
       baseUrl: "https://api.example.com",
-      endpoints: {},
+      fetchEndpoints: {},
+      mutateEndpoints: {},
       client: customClient,
       headers: customHeaders,
     });
@@ -115,7 +125,8 @@ describe("createApi", () => {
     const customHeaders = { "X-Custom-Header": "value" };
     const api = createApi({
       baseUrl: "https://api.example.com",
-      endpoints: {},
+      fetchEndpoints: {},
+      mutateEndpoints: {},
       headers: customHeaders,
     });
 
@@ -128,7 +139,8 @@ describe("createApi", () => {
 
     const api = createApi({
       baseUrl: "https://api.example.com",
-      endpoints: {},
+      fetchEndpoints: {},
+      mutateEndpoints: {},
       middleware: {
         before: beforeMiddleware,
       },
@@ -143,7 +155,8 @@ describe("createApi", () => {
 
     const api = createApi({
       baseUrl: "https://api.example.com",
-      endpoints: {},
+      fetchEndpoints: {},
+      mutateEndpoints: {},
       middleware: {
         onError: errorMiddleware,
       },
@@ -158,7 +171,8 @@ describe("createApi", () => {
 
     const api = createApi({
       baseUrl: "https://api.example.com",
-      endpoints: {},
+      fetchEndpoints: {},
+      mutateEndpoints: {},
       middleware: {
         after: afterMiddleware,
       },
@@ -171,7 +185,8 @@ describe("createApi", () => {
   it("should create API with no middleware", () => {
     const api = createApi({
       baseUrl: "https://api.example.com",
-      endpoints: {},
+      fetchEndpoints: {},
+      mutateEndpoints: {},
     });
 
     expect(api.middleware).toHaveLength(0);
@@ -186,7 +201,8 @@ describe("createApi", () => {
 
     const api = createApi({
       baseUrl: "https://api.example.com",
-      endpoints: {},
+      fetchEndpoints: {},
+      mutateEndpoints: {},
       client: customClient,
       headers: newHeaders,
     });
@@ -208,7 +224,8 @@ describe("createApi", () => {
 
     createApi({
       baseUrl: "https://api.example.com",
-      endpoints: {},
+      fetchEndpoints: {},
+      mutateEndpoints: {},
       client: customClient,
       middleware: {
         before: beforeMiddleware,
@@ -235,7 +252,8 @@ describe("createApi", () => {
 
     const api = createApi({
       baseUrl,
-      endpoints: {},
+      fetchEndpoints: {},
+      mutateEndpoints: {},
       headers,
     });
 
@@ -250,7 +268,8 @@ describe("createApi", () => {
 
     createApi({
       baseUrl: newBaseUrl,
-      endpoints: {},
+      fetchEndpoints: {},
+      mutateEndpoints: {},
       client: customClient,
     });
 
@@ -260,7 +279,8 @@ describe("createApi", () => {
   it("should create API with default QueryClient when not provided", () => {
     const api = createApi({
       baseUrl: "https://api.example.com",
-      endpoints: {},
+      fetchEndpoints: {},
+      mutateEndpoints: {},
     });
 
     expect(api.queryClient).toBeInstanceOf(QueryClient);
@@ -275,7 +295,8 @@ describe("createApi", () => {
 
     const api = createApi({
       baseUrl: "https://api.example.com",
-      endpoints: {},
+      fetchEndpoints: {},
+      mutateEndpoints: {},
       client: customClient,
       headers: newHeaders,
     });
@@ -289,7 +310,8 @@ describe("createApi", () => {
   it("should handle client creation with no headers", () => {
     const api = createApi({
       baseUrl: "https://api.example.com",
-      endpoints: {},
+      fetchEndpoints: {},
+      mutateEndpoints: {},
     });
 
     expect(api.client.defaults.baseURL).toBe("https://api.example.com");
@@ -300,7 +322,8 @@ describe("createApi", () => {
     const customClient = axios.create();
     const api = createApi({
       baseUrl: "https://api.example.com",
-      endpoints: {},
+      fetchEndpoints: {},
+      mutateEndpoints: {},
       client: customClient,
     });
 
@@ -315,10 +338,12 @@ describe("createApi", () => {
 
     const api = createApi({
       baseUrl: "https://api.example.com",
-      endpoints,
+      fetchEndpoints,
+      mutateEndpoints,
     });
 
-    expect(api.endpoints).toBe(endpoints);
+    expect(api.fetchEndpoints).toBe(fetchEndpoints);
+    expect(api.mutateEndpoints).toBe(mutateEndpoints);
   });
 
   it("should properly configure request interceptor", async () => {
@@ -334,7 +359,8 @@ describe("createApi", () => {
 
     createApi({
       baseUrl: "https://api.example.com",
-      endpoints: {},
+      fetchEndpoints: {},
+      mutateEndpoints: {},
       client: customClient,
       middleware: {
         before: beforeMiddleware,
@@ -356,7 +382,8 @@ describe("createApi", () => {
 
     createApi({
       baseUrl: "https://api.example.com",
-      endpoints: {},
+      fetchEndpoints: {},
+      mutateEndpoints: {},
       client: customClient,
       middleware: {
         after: afterMiddleware,
@@ -375,7 +402,8 @@ describe("createApi", () => {
 
     createApi({
       baseUrl: "https://api.example.com",
-      endpoints: {},
+      fetchEndpoints: {},
+      mutateEndpoints: {},
       client: customClient,
       middleware: {
         onError: errorMiddleware,
@@ -397,7 +425,8 @@ describe("createApi", () => {
 
     createApi({
       baseUrl: "https://api.example.com",
-      endpoints: {},
+      fetchEndpoints: {},
+      mutateEndpoints: {},
       client: customClient,
       middleware: {
         before: beforeMiddleware,
@@ -484,7 +513,8 @@ describe("createApi middleware configuration", () => {
   it("should handle undefined middleware", () => {
     const api = createApi({
       baseUrl: "https://api.example.com",
-      endpoints: {},
+      fetchEndpoints: {},
+      mutateEndpoints: {},
       middleware: undefined,
     });
 
@@ -494,7 +524,8 @@ describe("createApi middleware configuration", () => {
   it("should handle empty middleware object", () => {
     const api = createApi({
       baseUrl: "https://api.example.com",
-      endpoints: {},
+      fetchEndpoints: {},
+      mutateEndpoints: {},
       middleware: {},
     });
 
@@ -510,7 +541,8 @@ describe("createApi middleware configuration", () => {
 
     const api = createApi({
       baseUrl: "https://api.example.com",
-      endpoints: {},
+      fetchEndpoints: {},
+      mutateEndpoints: {},
       client: customClient,
       middleware: {
         before: beforeMiddleware,

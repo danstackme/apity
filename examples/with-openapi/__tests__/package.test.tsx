@@ -1,9 +1,52 @@
-import { ApiProvider, useFetch, useMutate } from "@danstackme/apity";
+import {
+  ApiProvider,
+  useFetch,
+  useMutate,
+  createApi,
+  createApiEndpoint,
+} from "@danstackme/apity";
 import { renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import axios, { AxiosStatic } from "axios";
 import React from "react";
-import { QueryClient } from "@tanstack/react-query";
+import { z } from "zod";
+
+const fetchEndpoints = {
+  "/users": [
+    createApiEndpoint({
+      method: "GET",
+      query: z.object({
+        filter: z.string(),
+      }),
+      response: z.void(),
+    }),
+  ],
+};
+
+const mutateEndpoints = {
+  "/users": [
+    createApiEndpoint({
+      method: "POST",
+      response: z.void(),
+      body: z.object({
+        name: z.string(),
+      }),
+    }),
+  ],
+};
+
+const api = createApi({
+  baseUrl: "http://api.example.com",
+  fetchEndpoints: fetchEndpoints,
+  mutateEndpoints: mutateEndpoints,
+});
+
+declare module "@danstackme/apity" {
+  interface Register {
+    fetchEndpoints: typeof fetchEndpoints;
+    mutateEndpoints: typeof mutateEndpoints;
+  }
+}
 
 // Mock axios
 vi.mock("axios", () => {
@@ -43,19 +86,11 @@ vi.mock("axios", () => {
 });
 
 describe("Package Integration Test", () => {
-  let queryClient: QueryClient;
   let mockAxios: AxiosStatic;
 
   beforeEach(() => {
-    queryClient = new QueryClient({
-      defaultOptions: {
-        queries: {
-          retry: false,
-        },
-      },
-    });
-
     mockAxios = axios;
+
     vi.clearAllMocks();
   });
 
@@ -69,19 +104,14 @@ describe("Package Integration Test", () => {
     (mockAxios.get as any).mockResolvedValueOnce({ data: mockData });
 
     const wrapper = ({ children }: { children: React.ReactNode }) => (
-      <ApiProvider
-        baseURL="http://api.example.com"
-        client={mockAxios}
-        queryClient={queryClient}
-      >
-        {children}
-      </ApiProvider>
+      <ApiProvider api={api}>{children}</ApiProvider>
     );
 
     // Test useFetch
     const { result } = renderHook(
       () =>
-        useFetch("/users", {
+        useFetch({
+          path: "/users",
           query: { filter: "active" },
         }),
       { wrapper }

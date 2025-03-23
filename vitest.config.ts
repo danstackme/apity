@@ -10,6 +10,7 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./tests/setup.ts"],
     include: ["tests/**/*.{test,spec}.{js,jsx,ts,tsx}"],
+    exclude: ["examples/**", "dist/**", "src/generated/**", "src/types.ts"],
     typecheck: {
       enabled: false,
     },

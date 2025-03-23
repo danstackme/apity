@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { ApiProvider } from "../src/context";
 import { createApi, createApiEndpoint } from "../src/createApi";
-import { useFetch, useMutate } from "../src/hooks";
+import { useFetch, useMutate } from "../src/index";
 
 // Define API endpoints for tests
 const userSchema = z.object({
@@ -60,16 +60,22 @@ const getUserPostWithIdEndpoint = createApiEndpoint({
   }),
 });
 
-const apiEndpoints = {
-  "/users": [usersEndpoint, createUserEndpoint],
-  "/users/[id]": [getUserEndpoint, updateUserEndpoint],
+const mutateEndpoints = {
+  "/users": [createUserEndpoint],
+  "/users/[id]": [updateUserEndpoint],
+} as const;
+
+const fetchEndpoints = {
+  "/users": [usersEndpoint],
+  "/users/[id]": [getUserEndpoint],
   "/users/[userId]/posts": [getUserPostsEndpoint],
   "/users/[userId]/posts/[postId]": [getUserPostWithIdEndpoint],
 } as const;
 
 declare module "../src/types" {
   interface Register {
-    endpoints: typeof apiEndpoints;
+    fetchEndpoints: typeof fetchEndpoints;
+    mutateEndpoints: typeof mutateEndpoints;
   }
 }
 
@@ -123,7 +129,8 @@ describe("API Hooks Integration", () => {
       baseUrl: "http://api.example.com",
       queryClient,
       client: axiosInstance,
-      endpoints: apiEndpoints,
+      fetchEndpoints,
+      mutateEndpoints,
     });
 
     wrapper = ({ children }) => (
@@ -142,7 +149,9 @@ describe("API Hooks Integration", () => {
     const mockData = { users: [{ id: "1", name: "Test" }] };
     (axiosInstance.get as any).mockResolvedValueOnce({ data: mockData });
 
-    const { result } = renderHook(() => useFetch("/users"), { wrapper });
+    const { result } = renderHook(() => useFetch({ path: "/users" }), {
+      wrapper,
+    });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -156,7 +165,9 @@ describe("API Hooks Integration", () => {
     const error = new Error("Network error");
     (axiosInstance.get as any).mockRejectedValueOnce(error);
 
-    const { result } = renderHook(() => useFetch("/users"), { wrapper });
+    const { result } = renderHook(() => useFetch({ path: "/users" }), {
+      wrapper,
+    });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error).toBe(error);
@@ -226,7 +237,8 @@ describe("API Hooks Integration", () => {
     expect(() =>
       renderHook(
         () =>
-          useFetch("/users/[id]", {
+          useFetch({
+            path: "/users/[id]",
             // @ts-expect-error - This is a test for missing params
             params: {},
           }),
@@ -264,7 +276,8 @@ describe("API Hooks Integration", () => {
 
     const { result } = renderHook(
       () =>
-        useFetch("/users/[userId]/posts", {
+        useFetch({
+          path: "/users/[userId]/posts",
           params: { userId: "123" },
         }),
       { wrapper }
@@ -280,12 +293,15 @@ describe("API Hooks Integration", () => {
 
   it("should handle missing path parameter object", () => {
     expect(() =>
-      renderHook(() => useFetch("/users/[id]"), { wrapper })
+      // @ts-expect-error - This is a test for missing params
+      renderHook(() => useFetch({ path: "/users/[id]" }), { wrapper })
     ).toThrow("Missing path parameter: id");
   });
 
   it("should handle path with no parameters", () => {
-    const { result } = renderHook(() => useFetch("/users"), { wrapper });
+    const { result } = renderHook(() => useFetch({ path: "/users" }), {
+      wrapper,
+    });
 
     expect(result.current.isLoading).toBe(true);
   });
@@ -296,7 +312,8 @@ describe("API Hooks Integration", () => {
 
     const { result } = renderHook(
       () =>
-        useFetch("/users/[userId]/posts/[postId]", {
+        useFetch({
+          path: "/users/[userId]/posts/[postId]",
           params: { userId: "123", postId: "456" },
         }),
       { wrapper }
@@ -313,7 +330,9 @@ describe("API Hooks Integration", () => {
     expect(() =>
       renderHook(
         () =>
-          useFetch("/users/[userId]/posts/[postId]", {
+          useFetch({
+            path: "/users/[userId]/posts/[postId]",
+            // @ts-expect-error - This is a test for missing params
             params: { userId: "123" },
           }),
         { wrapper }
@@ -324,7 +343,8 @@ describe("API Hooks Integration", () => {
   it("should handle path with invalid parameter format", () => {
     const { result } = renderHook(
       () =>
-        useFetch("/users", {
+        useFetch({
+          path: "/users",
           params: { id: "123" },
         }),
       { wrapper }

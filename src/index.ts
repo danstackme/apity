@@ -9,5 +9,6 @@ export type {
   ApiConfig,
   FetchEndpoint,
   MutateEndpoint,
+  ApiContext,
 } from "./types";
 export { createApiEndpoint, createApi } from "./createApi";

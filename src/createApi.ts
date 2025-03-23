@@ -15,7 +15,7 @@ export function createApiEndpoint<
   TQuery = unknown,
 >(config: {
   method: TMethod;
-  response: z.ZodType<TResponse>;
+  response?: z.ZodType<TResponse>;
   body?: z.ZodType<TBody>;
   query?: z.ZodType<TQuery>;
 }): TMethod extends "GET"
