@@ -332,10 +332,6 @@ describe("createApi", () => {
   });
 
   it("should return correct API tree", () => {
-    const endpoints = {
-      "/test": [createApiEndpoint({ method: "GET" })],
-    };
-
     const api = createApi({
       baseUrl: "https://api.example.com",
       fetchEndpoints,
