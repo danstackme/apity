@@ -1,27 +1,39 @@
-# Source
+# Source code and test files
 src/
 tests/
 examples/
 scripts/
 
-# Config files
-.eslintrc
-.prettierrc
-tsconfig.json
+# Configuration files
+.eslintrc*
+.prettierrc*
+.eslintignore
+tsconfig*.json
 tsup.config.ts
 vite.config.ts
 vitest.config.ts
+.husky/
 
-# Development files
+# Documentation files except README and LICENSE
+*.md
+!README.md
+!LICENSE
+
+# Development files and directories
 .git/
 .github/
 .vscode/
+.idea/
 coverage/
 node_modules/
 
-# Misc
-.DS_Store
+# CI/CD
+.travis.yml
+.circleci/
+.gitlab-ci.yml
+
+# Build artifacts and logs
 *.log
+*.tsbuildinfo
 .env*
-.idea/
-*.tsbuildinfo 
+.DS_Store 

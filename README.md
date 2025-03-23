@@ -1,15 +1,14 @@
-# DanStack API
+# Apity
 
-A type-safe API client generator for React applications with file-based routing and runtime validation.
+A type-safe API client generator for React applications with runtime validation.
 
 ## Features
 
 - 🔒 Type-safe API endpoints with TypeScript
-- 📁 File-based routing for API endpoints
-- 🔄 Automatic type generation
+- 📄 Define your API schema with Zod
+- 🔄 Static type generation for path and query parameters
 - 🎯 Runtime validation with Zod
 - ⚡️ React Query integration
-- 🚀 OpenAPI/Swagger support
 
 ## Installation
 
@@ -19,41 +18,98 @@ npm install @danstackme/apity
 
 ## Quick Start
 
-1. Create your API endpoints in the `endpoints` directory:
+1. Define your API endpoints:
 
 ```typescript
-// endpoints/users/index.ts
-import { createApiEndpoint } from "@danstackme/apity";
+// src/endpoints.ts
+import { createApi, createApiEndpoint } from "@danstackme/apity";
 import { z } from "zod";
 
-const userSchema = z.object({
+// Define your Zod schemas
+const UserSchema = z.object({
   id: z.string(),
   name: z.string(),
+  email: z.string().email(),
 });
 
-export const GET = createApiEndpoint({
+const UsersResponseSchema = z.array(UserSchema);
+
+const CreateUserSchema = z.object({
+  name: z.string(),
+  email: z.string().email(),
+});
+
+const QuerySchema = z.object({
+  limit: z.number(),
+  offset: z.number().optional(),
+});
+
+// Define your endpoints
+const getUsersEndpoint = createApiEndpoint({
   method: "GET",
-  responseSchema: z.array(userSchema),
+  response: UsersResponseSchema,
+  query: QuerySchema,
 });
 
-export const POST = createApiEndpoint({
+const createUserEndpoint = createApiEndpoint({
   method: "POST",
-  responseSchema: userSchema,
-  bodySchema: z.object({
-    name: z.string(),
-  }),
+  response: UserSchema,
+  body: CreateUserSchema,
+});
+
+const getUserEndpoint = createApiEndpoint({
+  method: "GET",
+  response: UserSchema,
+});
+
+const updateUserEndpoint = createApiEndpoint({
+  method: "PUT",
+  response: UserSchema,
+  body: CreateUserSchema,
+});
+
+const deleteUserEndpoint = createApiEndpoint({
+  method: "DELETE",
+  response: z.void(),
+});
+
+// Export your endpoints
+export const fetchEndpoints = {
+  "/users": [getUsersEndpoint],
+  "/users/[id]": [getUserEndpoint],
+} as const;
+
+export const mutateEndpoints = {
+  "/users": [createUserEndpoint],
+  "/users/[id]": [updateUserEndpoint, deleteUserEndpoint],
+} as const;
+
+// Create and export the API instance
+export const api = createApi({
+  baseUrl: "https://api.example.com",
+  fetchEndpoints,
+  mutateEndpoints,
 });
 ```
 
-2. Set up the API provider in your app:
+2. Set up the type definitions in your application (typically in App.tsx):
 
 ```typescript
 // src/App.tsx
 import { ApiProvider } from "@danstackme/apity";
+import { api, fetchEndpoints, mutateEndpoints } from "./endpoints";
+
+// Register your endpoints for type safety
+declare module "@danstackme/apity" {
+  interface Register {
+    fetchEndpoints: typeof fetchEndpoints;
+    mutateEndpoints: typeof mutateEndpoints;
+  }
+}
 
 function App() {
   return (
-    <ApiProvider baseURL="https://api.example.com">
+    <ApiProvider api={api}>
       <YourApp />
     </ApiProvider>
   );
@@ -66,111 +122,117 @@ function App() {
 // src/components/UserList.tsx
 import { useFetch, useMutate } from "@danstackme/apity";
 
-function UserList() {
-  const { data: users } = useFetch("/users");
-  const createUser = useMutate({ path: "/users", method: "POST" });
+export function UserList() {
+  // Fetch users with required query parameters
+  const { data: users, isLoading } = useFetch({
+    path: "/users",
+    query: {
+      limit: 10,
+      offset: 0,
+    },
+  });
+
+  // Set up a mutation with path parameters
+  const { mutate: createUser, isPending: isCreating } = useMutate({
+    path: "/users/[id]",
+    method: "PUT",
+    body: {
+      name: "",
+      email: "",
+    },
+    params: { id: 1 },
+  });
+
+  // Another mutation example
+  const { mutate: deleteUser } = useMutate({
+    path: "/users/[id]",
+    method: "DELETE",
+    params: { id: 1 },
+  });
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div>
-      {users?.map((user) => (
-        <div key={user.id}>{user.name}</div>
-      ))}
-      <button onClick={() => createUser.mutate({ name: "New User" })}>
-        Add User
-      </button>
+      <h1>Users</h1>
+
+      {/* Create user form */}
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          const formData = new FormData(e.currentTarget);
+          createUser({
+            name: formData.get("name") as string,
+            email: formData.get("email") as string,
+          });
+        }}
+      >
+        <input type="text" name="name" placeholder="Name" required />
+        <input type="email" name="email" placeholder="Email" required />
+        <button type="submit" disabled={isCreating}>
+          {isCreating ? "Creating..." : "Create User"}
+        </button>
+      </form>
+
+      {/* User list */}
+      <div>
+        {users?.map((user) => (
+          <div key={user.id}>
+            <h3>{user.name}</h3>
+            <p>{user.email}</p>
+            <button onClick={() => deleteUser({ params: { id: user.id } })}>
+              Delete
+            </button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 ```
 
-## Type Generation
+## Advanced Usage
 
-The package automatically generates types for your API endpoints. This happens:
+### Adding Middleware
 
-1. After installation (via postinstall script)
-2. When you run the type generation command
-3. Automatically during development when using the Vite plugin
-
-You can generate types at any time by running:
-
-```bash
-npx apity-generate
-```
-
-### Development Mode
-
-If you're using Vite, you can add the Apity plugin to automatically generate types during development:
+You can add middleware for authentication, error handling, and more:
 
 ```typescript
-// vite.config.ts
-import { defineConfig } from "vite";
-import { apityPlugin } from "@danstackme/apity/vite";
-
-export default defineConfig({
-  plugins: [
-    apityPlugin(),
-    // ... other plugins
-  ],
+export const api = createApi({
+  baseUrl: "https://api.example.com",
+  fetchEndpoints,
+  mutateEndpoints,
+  middleware: {
+    before: (config) => {
+      // Add authentication header
+      config.headers = {
+        ...config.headers,
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      };
+      return config;
+    },
+    onError: (error) => {
+      // Handle unauthorized errors
+      if (error.response?.status === 401) {
+        window.location.href = "/login";
+      }
+      return Promise.reject(error);
+    },
+  },
 });
 ```
 
-This will automatically watch your `endpoints` directory and regenerate types when you make changes.
+### Path Parameters
 
-## API Reference
-
-### `useFetch`
+For dynamic routes, use square brackets in the path and provide params:
 
 ```typescript
-function useFetch<TPath extends PathOf<ApiTree>>(
-  path: TPath,
-  options?: UseFetchOptions<TPath>
-);
-```
-
-Fetches data from an API endpoint.
-
-```typescript
-const { data, isLoading, error } = useFetch("/users", {
+const { data: user } = useFetch({
+  path: "/users/[id]",
   params: { id: "123" },
-  query: { filter: "active" },
 });
-```
-
-### `useMutate`
-
-```typescript
-function useMutate<TPath extends PathOf<ApiTree>>(
-  path: TPath,
-  options: UseMutateOptions<TPath>
-);
-```
-
-Performs mutations (POST, PUT, DELETE) on an API endpoint.
-
-```typescript
-const { mutate, isLoading, error } = useMutate({
-  path: "/users",
-  method: "POST",
-  onSuccess: () => {
-    // Handle success
-  },
-  onError: (error) => {
-    // Handle error
-  },
-});
-```
-
-## File Structure
-
-```
-endpoints/
-  users/
-    [id].ts        # /users/[id] (GET, PUT, DELETE)
-    index.ts       # /users (GET, POST)
-  posts/
-    [id]/
-      comments.ts  # /posts/[id]/comments (GET, POST)
-    index.ts       # /posts (GET, POST)
 ```
 
 ## License

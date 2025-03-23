@@ -161,17 +161,6 @@ export type ExtractPathParams<TPath extends string> =
         : {})
     : {};
 
-// Helper type for hook parameters
-export interface FetchParams<TQuery, TParams> {
-  query?: TQuery;
-  params?: TParams;
-}
-
-export interface MutateParams<TBody, TParams> {
-  body?: TBody;
-  params?: TParams;
-}
-
 export type FetchPath = keyof ConsumerFetchEndpoints & string;
 export type MutatePath = keyof ConsumerMutateEndpoints & string;
 
