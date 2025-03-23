@@ -26,9 +26,7 @@
     "LICENSE"
   ],
   "bin": {
-    "apity-import": "./dist/cli/import-openapi.js",
-    "apity-generate": "./dist/cli/generate.js",
-    "apity-watch": "./dist/cli/watch.js"
+    "apity-import": "./dist/scripts/import-openapi.js"
   },
   "scripts": {
     "dev": "tsup --watch",
