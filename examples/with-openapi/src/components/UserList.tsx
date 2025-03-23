@@ -2,16 +2,28 @@ import { useFetch, useMutate } from "@danstackme/apity";
 
 export function UserList() {
   const { data: users, isLoading } = useFetch({
+    path: "/users",
+    query: {
+      limit: 10,
+      offset: 0,
+    },
+  });
+
+  const { mutate: createUser, isPending: isCreating } = useMutate({
     path: "/users/[id]",
+    method: "PUT",
+    body: {
+      name: "",
+      email: "",
+    },
     params: { id: 1 },
   });
 
-  const { mutate: createUser, isPending: isCreating } = useMutate("/users", {
-    method: "post",
-  });
-
-  const { mutate: deleteUser } = useMutate("/users/[id]", {
-    method: "delete",
+  const { mutate: deleteUser } = useMutate({
+    path: "/users/[id]",
+    method: "DELETE",
+    params: { id: 1 },
+    body: {},
   });
 
   if (isLoading) {
@@ -28,10 +40,8 @@ export function UserList() {
           e.preventDefault();
           const formData = new FormData(e.currentTarget);
           createUser({
-            body: {
-              name: formData.get("name") as string,
-              email: formData.get("email") as string,
-            },
+            name: formData.get("name") as string,
+            email: formData.get("email") as string,
           });
         }}
         className="mb-6 space-y-4"

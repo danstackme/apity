@@ -184,10 +184,12 @@ describe("API Hooks Integration", () => {
 
     const { result } = renderHook(
       () =>
-        useMutate("/users", {
-          method: "post",
+        useMutate({
+          path: "/users",
+          method: "POST",
           onSuccess,
           onError,
+          body: { name: "New User" },
         }),
       { wrapper }
     );
@@ -198,12 +200,16 @@ describe("API Hooks Integration", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(axiosInstance.request).toHaveBeenCalledWith({
-      method: "post",
+      method: "POST",
       url: "/users",
       baseURL: "http://api.example.com",
-      data: variables,
+      data: { name: "New User" },
     });
-    expect(onSuccess).toHaveBeenCalledWith(mockResponse, variables, undefined);
+    expect(onSuccess).toHaveBeenCalledWith(
+      mockResponse,
+      { name: "New User" },
+      undefined
+    );
     expect(onError).not.toHaveBeenCalled();
   });
 
@@ -216,10 +222,12 @@ describe("API Hooks Integration", () => {
 
     const { result } = renderHook(
       () =>
-        useMutate("/users", {
-          method: "post",
+        useMutate({
+          path: "/users",
+          method: "POST",
           onSuccess,
           onError,
+          body: { name: "New User" },
         }),
       { wrapper }
     );
@@ -230,7 +238,11 @@ describe("API Hooks Integration", () => {
     await waitFor(() => expect(result.current.isError).toBe(true));
 
     expect(onSuccess).not.toHaveBeenCalled();
-    expect(onError).toHaveBeenCalledWith(error, variables, undefined);
+    expect(onError).toHaveBeenCalledWith(
+      error,
+      { name: "New User" },
+      undefined
+    );
   });
 
   it("should throw error when path parameter is missing", () => {
@@ -253,9 +265,11 @@ describe("API Hooks Integration", () => {
 
     const { result } = renderHook(
       () =>
-        useMutate("/users/[id]", {
-          method: "put",
+        useMutate({
+          path: "/users/[id]",
+          method: "PUT",
           params: { id: "123" },
+          body: { name: "Updated" },
         }),
       { wrapper }
     );
@@ -263,7 +277,7 @@ describe("API Hooks Integration", () => {
     await result.current.mutateAsync({ name: "Updated" });
 
     expect(axiosInstance.request).toHaveBeenCalledWith({
-      method: "put",
+      method: "PUT",
       url: "/users/123",
       baseURL: "http://api.example.com",
       data: { name: "Updated" },

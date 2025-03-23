@@ -1,10 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { useApiContext } from "./context";
-import { UseFetchOptionsType, Path } from "./types";
+import { UseFetchOptionsType, FetchPath } from "./types";
 
 import { getParamName, interpolatePath } from "./utils";
 
-export function useFetch<TPath extends Path>(
+export function useFetch<TPath extends FetchPath>(
   options: UseFetchOptionsType<TPath>
 ) {
   const { path, params, query, enabled = true, ...queryOptions } = options;

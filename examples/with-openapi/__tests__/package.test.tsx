@@ -134,8 +134,12 @@ describe("Package Integration Test", () => {
 
     const { result: mutateResult } = renderHook(
       () =>
-        useMutate("/users", {
+        useMutate({
+          path: "/users",
           method: "POST",
+          body: {
+            name: "New User",
+          },
         }),
       { wrapper }
     );
@@ -149,7 +153,7 @@ describe("Package Integration Test", () => {
     });
 
     expect(mockAxios.request).toHaveBeenCalledWith({
-      method: "post",
+      method: "POST",
       url: "/users",
       baseURL: "http://api.example.com",
       data: variables,

@@ -8,6 +8,10 @@ export const UserSchema = z.object({
   email: z.string().email(),
 });
 
+export const UserPutSchema = z.object({
+  test: z.string(),
+});
+
 export const UsersResponseSchema = z.array(UserSchema);
 
 export const CreateUserSchema = z.object({
@@ -32,6 +36,12 @@ const createUserEndpoint = createApiEndpoint({
   body: CreateUserSchema,
 });
 
+const updateUsersEndpoint = createApiEndpoint({
+  method: "PUT",
+  response: UserPutSchema,
+  body: UserPutSchema,
+});
+
 const getUserEndpoint = createApiEndpoint({
   method: "GET",
   response: UserSchema,
@@ -54,7 +64,7 @@ export const fetchEndpoints = {
 } as const;
 
 export const mutateEndpoints = {
-  "/users": [createUserEndpoint],
+  "/users": [createUserEndpoint, updateUsersEndpoint],
   "/users/[id]": [updateUserEndpoint, deleteUserEndpoint],
 } as const;
 

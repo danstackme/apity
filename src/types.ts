@@ -1,4 +1,8 @@
-import { QueryClient, UseQueryOptions } from "@tanstack/react-query";
+import {
+  QueryClient,
+  UseMutationOptions,
+  UseQueryOptions,
+} from "@tanstack/react-query";
 import { AxiosInstance } from "axios";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
@@ -82,11 +86,11 @@ export type GetPathParamType<TPath extends string> =
     ? { params: ExtractPathParams<TPath> }
     : { params?: ExtractPathParams<TPath> };
 
-export type UseFetchOptionsType<TPath extends Path> = Omit<
+export type UseFetchOptionsType<TPath extends FetchPath> = Omit<
   UseQueryOptions<
-    ConsumerFetchEndpoints[TPath][number]["response"],
+    FetchResponseFor<TPath, "GET">,
     Error,
-    ConsumerFetchEndpoints[TPath][number]["response"],
+    FetchResponseFor<TPath, "GET">,
     any
   >,
   "queryKey" | "queryFn"
@@ -95,14 +99,57 @@ export type UseFetchOptionsType<TPath extends Path> = Omit<
 } & GetPathParamType<TPath> &
   GetQueryParamType<TPath, "GET">;
 
+export type UseMutateOptionsType<
+  TPath extends MutatePath,
+  TMethod extends AvailableMutateMethods<TPath>,
+> = Omit<
+  UseMutationOptions<
+    MutateResponseFor<TPath, TMethod>,
+    Error,
+    MutateBodyFor<TPath, TMethod>
+  >,
+  "mutationFn"
+> & {
+  path: TPath;
+  method: TMethod;
+} & GetPathParamType<TPath> &
+  GetBodyParamType<TPath, TMethod> &
+  GetQueryParamType<TPath, TMethod>;
+
 export type GetQueryParamType<
-  TPath extends Path,
+  TPath extends FetchPath | MutatePath,
   TMethod extends HttpMethod,
   TEndpoint extends AnyApiEndpoint = EndpointsByMethod<TPath, TMethod>,
 > =
   HasRequiredField<NonNullable<TEndpoint["query"]>> extends true
     ? NonNullable<RequiredQueryParams<TEndpoint>>
     : NonNullable<OptionalQueryParams<TEndpoint>>;
+
+export type GetBodyParamType<
+  TPath extends FetchPath | MutatePath,
+  TMethod extends HttpMethod,
+  TEndpoint extends AnyApiEndpoint = EndpointsByMethod<TPath, TMethod>,
+> = TMethod extends "POST"
+  ? NonNullable<RequiredBodyParams<Extract<TEndpoint, { method: "POST" }>>>
+  : TMethod extends "PUT"
+    ? NonNullable<RequiredBodyParams<Extract<TEndpoint, { method: "PUT" }>>>
+    : TMethod extends "DELETE"
+      ? NonNullable<
+          RequiredBodyParams<Extract<TEndpoint, { method: "DELETE" }>>
+        >
+      : TMethod extends "PATCH"
+        ? NonNullable<
+            RequiredBodyParams<Extract<TEndpoint, { method: "PATCH" }>>
+          >
+        : never;
+
+export type RequiredBodyParams<TEndpoint extends AnyApiEndpoint> = {
+  body: NonNullable<TEndpoint["body"]>;
+};
+
+export type OptionalBodyParams<TEndpoint extends AnyApiEndpoint> = {
+  body?: NonNullable<TEndpoint["body"]>;
+};
 
 // Helper type to extract path parameters from a URL pattern
 export type ExtractPathParams<TPath extends string> =
@@ -125,22 +172,41 @@ export interface MutateParams<TBody, TParams> {
   params?: TParams;
 }
 
-export type Path = keyof ConsumerFetchEndpoints & string;
-export type Method<P extends Path> = keyof ConsumerFetchEndpoints[P] & string;
+export type FetchPath = keyof ConsumerFetchEndpoints & string;
+export type MutatePath = keyof ConsumerMutateEndpoints & string;
+
+export type MutateMethodsFor<P extends MutatePath, M extends HttpMethod> =
+  Extract<ConsumerMutateEndpoints[P][number]["method"], M> extends never
+    ? never
+    : M;
+
+export type MutateResponseFor<P extends MutatePath, M extends HttpMethod> =
+  Extract<ConsumerMutateEndpoints[P][number]["method"], M> extends never
+    ? never
+    : Extract<ConsumerMutateEndpoints[P][number], { method: M }>["response"];
+
+export type MutateBodyFor<P extends MutatePath, M extends HttpMethod> =
+  Extract<ConsumerMutateEndpoints[P][number]["method"], M> extends never
+    ? never
+    : Extract<ConsumerMutateEndpoints[P][number], { method: M }>["body"];
+
+export type FetchResponseFor<P extends FetchPath, M extends HttpMethod> =
+  Extract<ConsumerFetchEndpoints[P][number]["method"], M> extends never
+    ? never
+    : Extract<ConsumerFetchEndpoints[P][number], { method: M }>["response"];
+
+export type AvailableMutateMethods<P extends MutatePath> =
+  | MutateMethodsFor<P, "POST">
+  | MutateMethodsFor<P, "PUT">
+  | MutateMethodsFor<P, "DELETE">
+  | MutateMethodsFor<P, "PATCH">;
 
 export type EndpointsByMethod<
-  TPath extends Path,
+  TPath extends FetchPath | MutatePath,
   TMethod extends HttpMethod,
-> = Extract<
-  TMethod extends "GET"
-    ? ConsumerFetchEndpoints[TPath][number]
-    : ConsumerMutateEndpoints[TPath][number],
-  TMethod extends "GET"
-    ? FetchEndpoint<any, any, any>
-    : TMethod extends Exclude<HttpMethod, "GET">
-      ? MutateEndpoint<TMethod, any, any, any>
-      : never
->;
+> = TMethod extends "GET"
+  ? Extract<ConsumerFetchEndpoints[TPath][number], { method: "GET" }>
+  : Extract<ConsumerMutateEndpoints[TPath][number], { method: TMethod }>;
 
 type RequiredKeys<T> = {
   [K in keyof T]-?: {} extends { [P in K]: T[K] } ? never : K;

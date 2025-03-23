@@ -1,34 +1,20 @@
-import { useMutation, UseMutationOptions } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { useApiContext } from "./context";
 import type {
-  ConsumerFetchEndpoints,
-  ExtractPathParams,
-  Method,
-  Path,
+  AvailableMutateMethods,
+  MutateBodyFor,
+  MutatePath,
+  MutateResponseFor,
+  UseMutateOptionsType,
 } from "./types";
 
 import { getParamName, interpolatePath } from "./utils";
 
 export function useMutate<
-  TPath extends Path,
-  TMethod extends Exclude<Method<TPath>, "GET">,
->(
-  path: TPath,
-  options: Omit<
-    UseMutationOptions<
-      ConsumerFetchEndpoints[TPath][TMethod]["response"],
-      Error,
-      ConsumerFetchEndpoints[TPath][TMethod] extends { body: any }
-        ? ConsumerFetchEndpoints[TPath][TMethod]["body"]
-        : undefined
-    >,
-    "mutationFn"
-  > & {
-    params?: ExtractPathParams<TPath>;
-    method?: "post" | "put" | "patch" | "delete";
-  } = {}
-) {
-  const { params, method = "post", ...mutationOptions } = options;
+  TPath extends MutatePath,
+  TMethod extends AvailableMutateMethods<TPath>,
+>(options: UseMutateOptionsType<TPath, TMethod>) {
+  const { path, params, method, ...mutationOptions } = options;
   const { client, config } = useApiContext();
 
   if (path.includes("[") && (!params || Object.keys(params).length === 0)) {
@@ -40,8 +26,8 @@ export function useMutate<
   return useMutation({
     ...mutationOptions,
     mutationFn: async (
-      data: ConsumerFetchEndpoints[TPath][TMethod]["body"]
-    ) => {
+      data: MutateBodyFor<TPath, TMethod>
+    ): Promise<MutateResponseFor<TPath, TMethod>> => {
       const response = await client.request({
         method,
         url,

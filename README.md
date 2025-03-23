@@ -68,7 +68,7 @@ import { useFetch, useMutate } from "@danstackme/apity";
 
 function UserList() {
   const { data: users } = useFetch("/users");
-  const createUser = useMutate("/users", { method: "POST" });
+  const createUser = useMutate({ path: "/users", method: "POST" });
 
   return (
     <div>
@@ -148,10 +148,14 @@ function useMutate<TPath extends PathOf<ApiTree>>(
 Performs mutations (POST, PUT, DELETE) on an API endpoint.
 
 ```typescript
-const { mutate, isLoading, error } = useMutate("/users", {
+const { mutate, isLoading, error } = useMutate({
+  path: "/users",
   method: "POST",
-  onSuccess: (data) => {
-    console.log("User created:", data);
+  onSuccess: () => {
+    // Handle success
+  },
+  onError: (error) => {
+    // Handle error
   },
 });
 ```

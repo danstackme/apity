@@ -1,4 +1,4 @@
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AxiosInstance } from "axios";
 import { createContext, useContext } from "react";
 import type { ApiContext as ApiContextType } from "./types";
@@ -25,14 +25,16 @@ interface ApiProviderProps {
 }
 
 export function ApiProvider({ children, api }: ApiProviderProps) {
+  const queryClient = api.queryClient ?? new QueryClient();
+
   const value: ApiContextValue = {
     client: api.client,
-    queryClient: api.queryClient,
+    queryClient,
     config: api.config,
   };
 
   return (
-    <QueryClientProvider client={api.queryClient}>
+    <QueryClientProvider client={queryClient}>
       <ApiContext.Provider value={value}>{children}</ApiContext.Provider>
     </QueryClientProvider>
   );
