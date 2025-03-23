@@ -1,7 +1,7 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-  entry: ["src/index.ts"],
+  entry: ["src/index.ts", "scripts/import-openapi.ts"],
   format: ["esm", "cjs"],
   dts: true,
   splitting: false,
@@ -18,10 +18,4 @@ export default defineConfig({
     "@babel/traverse",
     "@babel/types",
   ],
-  esbuildOptions(options) {
-    options.banner = {
-      js: '"use client";',
-    };
-    return options;
-  },
 });
