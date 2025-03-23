@@ -9,6 +9,7 @@ A type-safe API client generator for React applications with runtime validation.
 - 🔄 Static type generation for path and query parameters
 - 🎯 Runtime validation with Zod
 - ⚡️ React Query integration
+- 🔄 Import from OpenAPI/Swagger specifications
 
 ## Installation
 
@@ -234,6 +235,59 @@ const { data: user } = useFetch({
   params: { id: "123" },
 });
 ```
+
+## OpenAPI/Swagger Import
+
+You can automatically generate type-safe endpoints from your OpenAPI/Swagger specification using the built-in CLI tool:
+
+```bash
+npx @danstackme/apity import-openapi <path-to-spec> --outDir <out-directory>
+```
+
+The --outDir defaults to `/src`
+
+The tool supports both JSON and YAML specifications and will:
+
+- Automatically convert Swagger 2.0 to OpenAPI 3.0
+- Generate type-safe endpoints with Zod validation
+- Create path and query parameter types
+- Set up proper request/response validation
+
+For example, given an OpenAPI spec like:
+
+```yaml
+openapi: 3.0.0
+paths:
+  /users:
+    get:
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        200:
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUser"
+      responses:
+        200:
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+```
+
+It will generate a fully typed `endpoints.ts` file with proper Zod validation schemas that you can immediately use in your application.
 
 ## License
 
