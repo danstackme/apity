@@ -115,26 +115,28 @@ export async function generateRoutes(
 
 // Add helper function to convert OpenAPI schema to Zod type
 function convertToZodSchema(
-  schema: OpenAPIV3.SchemaObject | undefined
+  schema: OpenAPIV3.SchemaObject | undefined,
+  _isRequired = false
 ): string {
   if (!schema) return "z.void()";
 
   let numberType: string;
   let itemType: string;
   let properties: string[];
+  let zodSchema: string;
 
   switch (schema.type) {
     case "string":
       if (schema.enum) {
-        return `z.enum([${schema.enum.map((e) => `'${e}'`).join(", ")}])`;
+        zodSchema = `z.enum([${schema.enum.map((e) => `'${e}'`).join(", ")}])`;
+      } else if (schema.format === "date-time") {
+        zodSchema = "z.string().datetime()";
+      } else if (schema.format === "email") {
+        zodSchema = "z.string().email()";
+      } else {
+        zodSchema = "z.string()";
       }
-      if (schema.format === "date-time") {
-        return "z.string().datetime()";
-      }
-      if (schema.format === "email") {
-        return "z.string().email()";
-      }
-      return schema.nullable ? "z.string().nullable()" : "z.string()";
+      break;
 
     case "number":
     case "integer":
@@ -145,34 +147,49 @@ function convertToZodSchema(
       if (schema.maximum !== undefined) {
         numberType += `.max(${schema.maximum})`;
       }
-      return schema.nullable ? `${numberType}.nullable()` : numberType;
+      zodSchema = numberType;
+      break;
 
     case "boolean":
-      return schema.nullable ? "z.boolean().nullable()" : "z.boolean()";
+      zodSchema = "z.boolean()";
+      break;
 
     case "array":
       if (schema.items) {
-        itemType = convertToZodSchema(schema.items as OpenAPIV3.SchemaObject);
-        return `z.array(${itemType})`;
+        itemType = convertToZodSchema(
+          schema.items as OpenAPIV3.SchemaObject,
+          true
+        );
+        zodSchema = `z.array(${itemType})`;
+      } else {
+        zodSchema = "z.array(z.unknown())";
       }
-      return "z.array(z.unknown())";
+      break;
 
     case "object":
       if (!schema.properties) return "z.object({})";
 
       properties = Object.entries(schema.properties).map(([key, prop]) => {
-        const isRequired = schema.required?.includes(key);
-        const propType = convertToZodSchema(prop as OpenAPIV3.SchemaObject);
-        return `${key}: ${isRequired ? propType : `${propType}.optional()`}`;
+        const propIsRequired = schema.required?.includes(key);
+        const propType = convertToZodSchema(
+          prop as OpenAPIV3.SchemaObject,
+          propIsRequired
+        );
+        return `${key}: ${propIsRequired ? propType : `${propType}.optional()`}`;
       });
 
-      return `z.object({
-        ${properties.join(",\n        ")}
-      })`;
+      zodSchema = `z.object({\n        ${properties.join(",\n        ")}\n      })`;
+      break;
 
     default:
-      return "z.unknown()";
+      zodSchema = "z.unknown()";
   }
+
+  if (schema.nullable) {
+    zodSchema += ".nullable()";
+  }
+
+  return zodSchema;
 }
 
 export async function generateSingleFile(
@@ -182,14 +199,23 @@ export async function generateSingleFile(
 ) {
   await mkdir(outDir, { recursive: true });
 
-  const getRoutes = new Map<string, Record<string, any>>();
-  const otherRoutes = new Map<string, Record<string, any>>();
+  const getRoutes = new Map<string, Map<string, any>>();
+  const otherRoutes = new Map<string, Map<string, any>>();
 
+  // Separate GET methods from other methods
   for (const [path, methods] of routes) {
-    if (methods.GET) {
-      getRoutes.set(path, methods);
-    } else {
-      otherRoutes.set(path, methods);
+    for (const [method, schema] of Object.entries(methods)) {
+      if (method === "GET") {
+        if (!getRoutes.has(path)) {
+          getRoutes.set(path, new Map());
+        }
+        getRoutes.get(path)?.set(method, schema);
+      } else {
+        if (!otherRoutes.has(path)) {
+          otherRoutes.set(path, new Map());
+        }
+        otherRoutes.get(path)?.set(method, schema);
+      }
     }
   }
 
@@ -201,8 +227,9 @@ export async function generateSingleFile(
   for (const [path, methods] of getRoutes) {
     const endpointNames = [];
 
-    for (const [method, schema] of Object.entries(methods)) {
-      const endpointName = `${method}_${path.replace(/\//g, "").replace(/\[.*?\]/g, "")}${Object.keys(schema.params).length > 0 ? `_${Object.keys(schema.params).join("_")}` : ""}`;
+    for (const [method, schema] of methods) {
+      const pathParams = Object.keys(schema.params.properties || {});
+      const endpointName = `${method}_${path.replace(/\//g, "").replace(/\[.*?\]/g, "")}${pathParams.length > 0 ? `_${pathParams.join("_")}` : ""}`;
       endpointNames.push(endpointName);
 
       content += `const ${endpointName} = createApiEndpoint({\n`;
@@ -210,7 +237,7 @@ export async function generateSingleFile(
 
       // Convert response schema
       if (Object.keys(schema.response).length > 0) {
-        content += `  response: ${convertToZodSchema(schema.response)},\n`;
+        content += `  response: ${convertToZodSchema(schema.response, true)},\n`;
       } else {
         content += `  response: z.void(),\n`;
       }
@@ -223,7 +250,9 @@ export async function generateSingleFile(
       content += `});\n\n`;
     }
 
-    fetchEndpointNames.set(path, endpointNames);
+    if (endpointNames.length > 0) {
+      fetchEndpointNames.set(path, endpointNames);
+    }
   }
 
   const mutateEndpointNames = new Map<string, string[]>();
@@ -231,8 +260,9 @@ export async function generateSingleFile(
   for (const [path, methods] of otherRoutes) {
     const endpointNames = [];
 
-    for (const [method, schema] of Object.entries(methods)) {
-      const endpointName = `${method}_${path.replace(/\//g, "").replace(/\[.*?\]/g, "")}${Object.keys(schema.params).length > 0 ? `_${Object.keys(schema.params).join("_")}` : ""}`;
+    for (const [method, schema] of methods) {
+      const pathParams = Object.keys(schema.params.properties || {});
+      const endpointName = `${method}_${path.replace(/\//g, "").replace(/\[.*?\]/g, "")}${pathParams.length > 0 ? `_${pathParams.join("_")}` : ""}`;
       endpointNames.push(endpointName);
 
       content += `const ${endpointName} = createApiEndpoint({\n`;
@@ -240,7 +270,7 @@ export async function generateSingleFile(
 
       // Convert response schema
       if (Object.keys(schema.response).length > 0) {
-        content += `  response: ${convertToZodSchema(schema.response)},\n`;
+        content += `  response: ${convertToZodSchema(schema.response, true)},\n`;
       } else {
         content += `  response: z.void(),\n`;
       }
@@ -258,7 +288,9 @@ export async function generateSingleFile(
       content += `});\n\n`;
     }
 
-    mutateEndpointNames.set(path, endpointNames);
+    if (endpointNames.length > 0) {
+      mutateEndpointNames.set(path, endpointNames);
+    }
   }
 
   content += `export const fetchEndpoints = {\n`;
