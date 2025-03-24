@@ -137,10 +137,6 @@ export function UserList() {
   const { mutate: createUser, isPending: isCreating } = useMutate({
     path: "/users/[id]",
     method: "PUT",
-    body: {
-      name: "",
-      email: "",
-    },
     params: { id: 1 },
   });
 
