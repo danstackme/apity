@@ -26,7 +26,7 @@ export function useMutate<
   return useMutation({
     ...mutationOptions,
     mutationFn: async (
-      data: MutateBodyFor<TPath, TMethod>
+      data?: MutateBodyFor<TPath, TMethod>
     ): Promise<MutateResponseFor<TPath, TMethod>> => {
       const response = await client.request({
         method,
