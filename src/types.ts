@@ -113,7 +113,6 @@ export type UseMutateOptionsType<
   path: TPath;
   method: TMethod;
 } & GetPathParamType<TPath> &
-  GetBodyParamType<TPath, TMethod> &
   GetQueryParamType<TPath, TMethod>;
 
 export type GetQueryParamType<

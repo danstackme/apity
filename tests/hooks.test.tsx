@@ -189,7 +189,6 @@ describe("API Hooks Integration", () => {
           method: "POST",
           onSuccess,
           onError,
-          body: { name: "New User" },
         }),
       { wrapper }
     );
@@ -227,7 +226,6 @@ describe("API Hooks Integration", () => {
           method: "POST",
           onSuccess,
           onError,
-          body: { name: "New User" },
         }),
       { wrapper }
     );
@@ -269,7 +267,6 @@ describe("API Hooks Integration", () => {
           path: "/users/[id]",
           method: "PUT",
           params: { id: "123" },
-          body: { name: "Updated" },
         }),
       { wrapper }
     );
