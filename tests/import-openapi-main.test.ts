@@ -40,18 +40,7 @@ vi.mock("commander", () => ({
   Command: vi.fn().mockImplementation(() => mockProgram),
 }));
 
-// Mock yaml module
-vi.mock("yaml", () => ({
-  default: {
-    parse: vi.fn().mockImplementation(() => {
-      return {
-        openapi: "3.0.0",
-        info: { title: "Test API", version: "1.0.0" },
-        paths: {},
-      };
-    }),
-  },
-}));
+// We don't need to mock yaml since we now use our own parseYaml function
 
 // Mock swagger2openapi
 vi.mock("swagger2openapi", () => ({
@@ -142,6 +131,125 @@ describe("import-openapi main function", () => {
 
     // Verify YAML was processed
     expect(mockReadFile).toHaveBeenCalledWith("test.yml", "utf-8");
+    expect(mockWriteFile).toHaveBeenCalled();
+  });
+
+  it("should process complex YAML files with arrays and nested objects", async () => {
+    // Set up readFile mock to return YAML with arrays and nested objects
+    mockReadFile.mockResolvedValueOnce(`
+openapi: 3.0.0
+info:
+  title: Complex API
+  version: 1.0.0
+servers:
+  - url: https://api.example.com
+    description: Production server
+  - url: https://staging-api.example.com
+    description: Staging server
+paths:
+  /users:
+    get:
+      summary: Get all users
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    name:
+                      type: string
+  /users/{id}:
+    get:
+      summary: Get user by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+    `);
+
+    // Set args to a YAML file
+    mockProgram.args = ["complex.yml"];
+
+    // Run the module which will execute main()
+    await runMainFunction();
+
+    // Verify YAML was processed
+    expect(mockReadFile).toHaveBeenCalledWith("complex.yml", "utf-8");
+    expect(mockWriteFile).toHaveBeenCalled();
+  });
+
+  it("should process YAML with edge cases including booleans, numbers and empty arrays", async () => {
+    // Set up readFile mock to return YAML with boolean, number values and multiple indentation patterns
+    mockReadFile.mockResolvedValueOnce(`
+openapi: 3.0.0
+info:
+  title: Edge Case API
+  version: 1.0.0
+# This is a comment that should be ignored
+flags:
+  isEnabled: true
+  isDisabled: false
+constants:
+  pi: 3.14159
+  count: 42
+  emptyValue: 
+  quotedString: "hello world"
+  singleQuoted: 'single quotes'
+arrays:
+  emptyArray:
+    - 
+  mixedTypes:
+    - 10
+    - "string"
+    - true
+    - 
+      nestedObj:
+        prop: value
+  nestedArray:
+    - 
+      - first level
+      - second item
+    - 
+      - another list
+empty_sections:
+paths:
+  /test:
+    get:
+      responses:
+        '200':
+          description: OK
+    `);
+
+    // Set args to a YAML file
+    mockProgram.args = ["edge-case.yml"];
+
+    // Run the module which will execute main()
+    await runMainFunction();
+
+    // Verify YAML was processed
+    expect(mockReadFile).toHaveBeenCalledWith("edge-case.yml", "utf-8");
     expect(mockWriteFile).toHaveBeenCalled();
   });
 

@@ -18,4 +18,8 @@ export default defineConfig({
     "@babel/traverse",
     "@babel/types",
   ],
+  noExternal: ["yaml"],
+  target: "node18",
+  platform: "node",
+  shims: true,
 });

@@ -1,9 +1,145 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import { mkdir, readFile, writeFile } from "fs/promises";
-import yaml from "yaml";
 import swagger2openapi from "swagger2openapi";
 import type { OpenAPIV3 } from "openapi-types";
+
+// Simple YAML parser to avoid node:process dependency
+function parseYaml(yamlString: string): any {
+  try {
+    // Very basic YAML parser for simple YAML structures
+    const lines = yamlString.split("\n");
+    const result: any = {};
+    let currentObject = result;
+    const stack: any[] = [result];
+    let currentIndent = 0;
+    let currentArray: any[] | null = null;
+    let arrayIndent = -1;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      // Skip empty lines and comments
+      if (line.trim() === "" || line.trim().startsWith("#")) continue;
+
+      // Calculate indent
+      const indent = line.search(/\S/);
+      if (indent < 0) continue;
+
+      // Check if this is an array item
+      if (line.trim().startsWith("-")) {
+        // Array item
+        const arrayItemMatch = line.trim().match(/^-\s*(.*)$/);
+        if (!arrayItemMatch) continue;
+
+        const value = arrayItemMatch[1].trim();
+
+        // Starting a new array
+        if (arrayIndent === -1 || indent !== arrayIndent) {
+          // Find the array key from the previous line
+          let j = i - 1;
+          while (j >= 0) {
+            const prevLine = lines[j].trim();
+            if (prevLine === "" || prevLine.startsWith("#")) {
+              j--;
+              continue;
+            }
+
+            const keyMatch = prevLine.match(/^([\w-]+):(?:\s*)?$/);
+            if (keyMatch) {
+              const arrayKey = keyMatch[1];
+              currentObject[arrayKey] = [];
+              currentArray = currentObject[arrayKey];
+              arrayIndent = indent;
+              break;
+            }
+            j--;
+          }
+        }
+
+        if (currentArray) {
+          if (value === "") {
+            // This is an object in the array
+            const newObj = {};
+            currentArray.push(newObj);
+            stack.push(currentObject);
+            currentObject = newObj;
+            currentIndent = indent;
+            currentArray = null; // We're now working with an object
+          } else {
+            // Simple value in array
+            let parsedValue: any = value;
+            if (parsedValue === "true") parsedValue = true;
+            else if (parsedValue === "false") parsedValue = false;
+            else if (!isNaN(Number(parsedValue)) && parsedValue !== "")
+              parsedValue = Number(parsedValue);
+            else if (parsedValue.startsWith("'") && parsedValue.endsWith("'"))
+              parsedValue = parsedValue.slice(1, -1);
+            else if (parsedValue.startsWith('"') && parsedValue.endsWith('"'))
+              parsedValue = parsedValue.slice(1, -1);
+
+            currentArray.push(parsedValue);
+          }
+        }
+        continue;
+      } else {
+        // If we're back to regular objects after array
+        if (indent <= arrayIndent) {
+          arrayIndent = -1;
+          currentArray = null;
+        }
+      }
+
+      // Get key and value for objects
+      const match = line.trim().match(/^([\w-]+):(?:\s(.+))?$/);
+      if (!match) continue;
+
+      const [_, key, value] = match;
+
+      if (value === undefined || value.trim() === "") {
+        // New object
+        currentObject[key] = {};
+        if (indent > currentIndent) {
+          stack.push(currentObject);
+          currentObject = currentObject[key];
+          currentIndent = indent;
+        } else if (indent < currentIndent) {
+          // Go back up the stack
+          while (stack.length > 1 && indent <= currentIndent) {
+            stack.pop();
+            currentObject = stack[stack.length - 1];
+            currentIndent -= 2; // Assuming 2-space indentation
+          }
+          currentObject[key] = {};
+          stack.push(currentObject);
+          currentObject = currentObject[key];
+        } else {
+          currentObject = stack[stack.length - 1];
+          currentObject[key] = {};
+          currentObject = currentObject[key];
+        }
+      } else {
+        // Simple key-value pair
+        // Handle string, number, boolean values
+        let parsedValue: any = value.trim();
+        if (parsedValue === "true") parsedValue = true;
+        else if (parsedValue === "false") parsedValue = false;
+        else if (!isNaN(Number(parsedValue)) && parsedValue !== "")
+          parsedValue = Number(parsedValue);
+        else if (parsedValue.startsWith("'") && parsedValue.endsWith("'"))
+          parsedValue = parsedValue.slice(1, -1);
+        else if (parsedValue.startsWith('"') && parsedValue.endsWith('"'))
+          parsedValue = parsedValue.slice(1, -1);
+
+        currentObject[key] = parsedValue;
+      }
+    }
+
+    return result;
+  } catch (error) {
+    console.error("Error parsing YAML:", error);
+    throw error;
+  }
+}
 
 interface GenerateOptions {
   outDir?: string;
@@ -600,7 +736,7 @@ async function main() {
     const content = await readFile(file, "utf-8");
     const doc =
       file.endsWith(".yaml") || file.endsWith(".yml")
-        ? yaml.parse(content)
+        ? parseYaml(content)
         : JSON.parse(content);
 
     const openapi = await convertToOpenAPI3(doc);
