@@ -32,6 +32,7 @@
     "dev": "tsup --watch",
     "build": "tsup",
     "test": "vitest run --coverage",
+    "test:coverage": "vitest run --coverage.enabled=true --coverage.reportOnFailure --coverage.reporter=text",
     "test:watch": "vitest",
     "test:types": "tsx scripts/generate.ts && tsc --noEmit",
     "typecheck": "tsc --noEmit",
@@ -41,8 +42,10 @@
     "prepack": "npm run build",
     "size": "size-limit",
     "release": "npm run lint && tsx scripts/release.ts",
-    "prepare": "husky",
-    "postinstall": "tsx scripts/generate.ts || exit 0"
+    "prepare": "husky || true",
+    "postinstall": "tsx scripts/generate.ts || exit 0",
+    "test:bump": "vitest run --coverage.enabled=true --coverage.reportOnFailure --coverage.provider=v8 --coverage.reporter=text",
+    "watch": "tsup --watch"
   },
   "lint-staged": {
     "*.{ts,tsx}": [

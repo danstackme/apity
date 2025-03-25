@@ -1,4 +1,4 @@
-import { writeFile } from "fs/promises";
+import { writeFile, readFile } from "fs/promises";
 import { OpenAPIV3 } from "openapi-types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -258,7 +258,7 @@ describe("import-openapi schemas", () => {
         true
       );
       expect(isReferenceObject({ type: "string" })).toBe(false);
-      expect(isReferenceObject(null)).toBe(null);
+      expect(isReferenceObject(null)).toBe(false);
     });
 
     it("should convert an OpenAPI 2 spec to OpenAPI 3", async () => {
@@ -546,6 +546,72 @@ describe("import-openapi schemas", () => {
         "z.enum(['pending', 'approved', 'rejected'])"
       );
     });
+
+    it("should handle schemas with unknown or non-standard types", async () => {
+      const schemaWithUnknownTypes: OpenAPIV3.Document = {
+        openapi: "3.0.0",
+        info: { title: "Test API", version: "1.0.0" },
+        paths: {
+          "/test": {
+            get: {
+              responses: {
+                "200": {
+                  description: "OK",
+                  content: {
+                    "application/json": {
+                      schema: {
+                        type: "object",
+                        properties: {
+                          emptyObject: {},
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      };
+
+      await generateRoutes(schemaWithUnknownTypes, { outDir: "src" });
+      const writeFileCall = vi.mocked(writeFile).mock.calls[0][1] as string;
+
+      expect(writeFileCall).toContain("GET_test");
+    });
+
+    it("should handle schemas with empty properties", async () => {
+      const emptyPropsSpec: OpenAPIV3.Document = {
+        openapi: "3.0.0",
+        info: { title: "Test API", version: "1.0.0" },
+        paths: {
+          "/test": {
+            get: {
+              responses: {
+                "200": {
+                  description: "OK",
+                  content: {
+                    "application/json": {
+                      schema: {
+                        type: "object",
+                        properties: {
+                          emptyObject: {},
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      };
+
+      await generateRoutes(emptyPropsSpec, { outDir: "src" });
+      const writeFileCall = vi.mocked(writeFile).mock.calls[0][1] as string;
+
+      expect(writeFileCall).toContain("GET_test");
+    });
   });
 
   describe("edge cases", () => {
@@ -642,6 +708,130 @@ describe("import-openapi schemas", () => {
       const writeFileCall = vi.mocked(writeFile).mock.calls[0][1] as string;
 
       expect(writeFileCall).toContain("z.object({})");
+    });
+
+    it("should handle null or undefined schema types", async () => {
+      const nullSchemaSpec: OpenAPIV3.Document = {
+        openapi: "3.0.0",
+        info: { title: "Test API", version: "1.0.0" },
+        paths: {
+          "/test": {
+            get: {
+              responses: {
+                "200": {
+                  description: "OK",
+                  content: {
+                    "application/json": {
+                      schema: {
+                        type: "object",
+                        properties: {
+                          // Testing edge case with undefined type
+                          undefinedType: { type: undefined },
+                          // Testing edge case with string type
+                          stringType: { type: "string" },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      };
+
+      await generateRoutes(nullSchemaSpec, { outDir: "src" });
+      const writeFileCall = vi.mocked(writeFile).mock.calls[0][1] as string;
+
+      expect(writeFileCall).toContain("z.unknown()");
+      expect(writeFileCall).toContain("z.string()");
+    });
+
+    it("should handle query and path parameters correctly", async () => {
+      const paramsSpec: OpenAPIV3.Document = {
+        openapi: "3.0.0",
+        info: { title: "Test API", version: "1.0.0" },
+        paths: {
+          "/test/{id}": {
+            get: {
+              parameters: [
+                {
+                  in: "path",
+                  name: "id",
+                  schema: { type: "string" },
+                  required: true,
+                },
+                {
+                  in: "query",
+                  name: "filter",
+                  schema: { type: "string" },
+                },
+                // A reference parameter
+                { $ref: "#/components/parameters/Test" },
+              ],
+              responses: {
+                "200": {
+                  description: "OK",
+                },
+              },
+            },
+          },
+        },
+        components: {
+          parameters: {
+            Test: {
+              in: "query",
+              name: "test",
+              schema: { type: "string" },
+            },
+          },
+        },
+      };
+
+      await generateRoutes(paramsSpec, { outDir: "src" });
+      const writeFileCall = vi.mocked(writeFile).mock.calls[0][1] as string;
+
+      expect(writeFileCall).toContain("GET_test_id");
+      expect(writeFileCall).toContain("query:");
+    });
+
+    it("should handle file paths with route parameters", async () => {
+      const pathParamSpec: OpenAPIV3.Document = {
+        openapi: "3.0.0",
+        info: { title: "Test API", version: "1.0.0" },
+        paths: {
+          "/{param1}/{param2}": {
+            get: {
+              parameters: [
+                {
+                  in: "path",
+                  name: "param1",
+                  schema: { type: "string" },
+                  required: true,
+                },
+                {
+                  in: "path",
+                  name: "param2",
+                  schema: { type: "string" },
+                  required: true,
+                },
+              ],
+              responses: {
+                "200": {
+                  description: "OK",
+                },
+              },
+            },
+          },
+        },
+      };
+
+      await generateRoutes(pathParamSpec, { outDir: "src" });
+      const writeFileCall = vi.mocked(writeFile).mock.calls[0][1] as string;
+
+      expect(writeFileCall).toContain("GET__param1_param2");
+      expect(writeFileCall).toContain("[param1]");
+      expect(writeFileCall).toContain("[param2]");
     });
   });
 });

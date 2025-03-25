@@ -19,7 +19,7 @@ export async function convertToOpenAPI3(doc: any): Promise<OpenAPIV3.Document> {
 }
 
 export function isReferenceObject(obj: any): obj is OpenAPIV3.ReferenceObject {
-  return obj && "$ref" in obj;
+  return obj !== null && obj !== undefined && "$ref" in obj;
 }
 
 // Function to extract the schema name from a reference
