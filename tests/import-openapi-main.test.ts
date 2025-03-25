@@ -1,4 +1,3 @@
-import { readFile, writeFile } from "fs/promises";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Set test environment
@@ -44,7 +43,7 @@ vi.mock("commander", () => ({
 // Mock yaml module
 vi.mock("yaml", () => ({
   default: {
-    parse: vi.fn().mockImplementation((content) => {
+    parse: vi.fn().mockImplementation(() => {
       return {
         openapi: "3.0.0",
         info: { title: "Test API", version: "1.0.0" },

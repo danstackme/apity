@@ -1,12 +1,12 @@
-import { writeFile, readFile } from "fs/promises";
+import { writeFile } from "fs/promises";
 import { OpenAPIV3 } from "openapi-types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   convertToOpenAPI3,
   generateRoutes,
+  getRefName,
   isReferenceObject,
   processSchemaDefinitions,
-  getRefName,
   resolveRef,
 } from "../scripts/import-openapi";
 
