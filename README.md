@@ -237,7 +237,7 @@ const { data: user } = useFetch({
 You can automatically generate type-safe endpoints from your OpenAPI/Swagger specification using the built-in CLI tool:
 
 ```bash
-npx @danstackme/apity import-openapi <path-to-spec> --outDir <out-directory>
+npx @danstackme/apity <path-to-spec> --outDir <out-directory>
 ```
 
 The --outDir defaults to `/src`
