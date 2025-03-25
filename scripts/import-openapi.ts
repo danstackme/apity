@@ -22,11 +22,55 @@ export function isReferenceObject(obj: any): obj is OpenAPIV3.ReferenceObject {
   return obj && "$ref" in obj;
 }
 
+// Function to extract the schema name from a reference
+export function getRefName(ref: string): string {
+  if (!ref) return "";
+  const parts = ref.split("/");
+  return parts[parts.length - 1];
+}
+
+// Function to resolve references in the OpenAPI schema
+export function resolveRef(
+  ref: string,
+  spec: OpenAPIV3.Document
+): OpenAPIV3.SchemaObject | undefined {
+  if (!ref.startsWith("#/")) return undefined;
+
+  const parts = ref.substring(2).split("/");
+  let current: any = spec;
+
+  for (const part of parts) {
+    if (!current[part]) return undefined;
+    current = current[part];
+  }
+
+  return current as OpenAPIV3.SchemaObject;
+}
+
+// Process schema definitions from the OpenAPI spec
+export function processSchemaDefinitions(
+  spec: OpenAPIV3.Document
+): Map<string, OpenAPIV3.SchemaObject> {
+  const schemas = new Map<string, OpenAPIV3.SchemaObject>();
+
+  // Extract schemas from components section
+  if (spec.components?.schemas) {
+    for (const [name, schema] of Object.entries(spec.components.schemas)) {
+      if (!isReferenceObject(schema)) {
+        schemas.set(name, schema);
+      }
+    }
+  }
+
+  return schemas;
+}
+
 export async function generateRoutes(
   spec: OpenAPIV3.Document,
   options: GenerateOptions
 ) {
   const routes = new Map<string, Record<string, any>>();
+  const schemas = processSchemaDefinitions(spec);
 
   // Process each path in the OpenAPI spec
   for (const [path, pathItem] of Object.entries(spec.paths || {})) {
@@ -51,14 +95,8 @@ export async function generateRoutes(
 
       methods[upperMethod] = {
         method: upperMethod,
-        response:
-          !response || isReferenceObject(response)
-            ? {}
-            : response.content?.["application/json"]?.schema || {},
-        body:
-          !requestBody || isReferenceObject(requestBody)
-            ? {}
-            : requestBody.content?.["application/json"]?.schema || {},
+        response: processResponseSchema(response, spec),
+        body: processRequestBodySchema(requestBody, spec),
         query: {},
         params: {},
       };
@@ -108,22 +146,228 @@ export async function generateRoutes(
 
   await generateSingleFile(
     routes,
+    schemas,
     options.outDir || "src",
     spec.servers?.[0]?.url || ""
   );
 }
 
+// Process response schema and resolve any references
+function processResponseSchema(
+  response: OpenAPIV3.ReferenceObject | OpenAPIV3.ResponseObject | undefined,
+  spec: OpenAPIV3.Document
+): OpenAPIV3.SchemaObject {
+  if (!response) return {};
+
+  if (isReferenceObject(response)) {
+    const resolvedSchema = resolveRef(response.$ref, spec);
+    return resolvedSchema || {};
+  }
+
+  const contentSchema = response.content?.["application/json"]?.schema;
+
+  if (!contentSchema) return {};
+
+  if (isReferenceObject(contentSchema)) {
+    const resolvedSchema = resolveRef(contentSchema.$ref, spec);
+    return resolvedSchema || {};
+  }
+
+  // Process allOf if present in the schema
+  if (contentSchema.allOf) {
+    return processAllOf(contentSchema, spec);
+  }
+
+  // Process oneOf if present in the schema (keep as is for later Zod union conversion)
+  if (contentSchema.oneOf) {
+    return contentSchema;
+  }
+
+  return contentSchema;
+}
+
+// Process request body schema and resolve any references
+function processRequestBodySchema(
+  requestBody:
+    | OpenAPIV3.ReferenceObject
+    | OpenAPIV3.RequestBodyObject
+    | undefined,
+  spec: OpenAPIV3.Document
+): OpenAPIV3.SchemaObject {
+  if (!requestBody) return {};
+
+  if (isReferenceObject(requestBody)) {
+    const resolvedSchema = resolveRef(requestBody.$ref, spec);
+    return resolvedSchema || {};
+  }
+
+  const contentSchema = requestBody.content?.["application/json"]?.schema;
+
+  if (!contentSchema) return {};
+
+  if (isReferenceObject(contentSchema)) {
+    const resolvedSchema = resolveRef(contentSchema.$ref, spec);
+    return resolvedSchema || {};
+  }
+
+  // Process allOf if present in the schema
+  if (contentSchema.allOf) {
+    return processAllOf(contentSchema, spec);
+  }
+
+  // Process oneOf if present in the schema (keep as is for later Zod union conversion)
+  if (contentSchema.oneOf) {
+    return contentSchema;
+  }
+
+  return contentSchema;
+}
+
+// Process allOf keyword by merging schemas
+function processAllOf(
+  schema: OpenAPIV3.SchemaObject,
+  spec: OpenAPIV3.Document
+): OpenAPIV3.SchemaObject {
+  if (
+    !schema.allOf ||
+    !Array.isArray(schema.allOf) ||
+    schema.allOf.length === 0
+  ) {
+    return schema;
+  }
+
+  // Create a copy of the schema without the allOf property
+  const { allOf, ...baseSchema } = schema;
+  const mergedSchema = { ...baseSchema };
+
+  // Merge all sub-schemas
+  for (const subSchema of allOf) {
+    let resolvedSubSchema: OpenAPIV3.SchemaObject;
+
+    if (isReferenceObject(subSchema)) {
+      const resolved = resolveRef(subSchema.$ref, spec);
+      if (!resolved) continue;
+      resolvedSubSchema = resolved;
+    } else {
+      resolvedSubSchema = subSchema;
+    }
+
+    // Recursively process nested allOf
+    if (resolvedSubSchema.allOf) {
+      resolvedSubSchema = processAllOf(resolvedSubSchema, spec);
+    }
+
+    // Merge properties
+    if (resolvedSubSchema.properties) {
+      mergedSchema.properties = {
+        ...mergedSchema.properties,
+        ...resolvedSubSchema.properties,
+      };
+    }
+
+    // Merge required fields
+    if (resolvedSubSchema.required && resolvedSubSchema.required.length > 0) {
+      mergedSchema.required = [
+        ...(mergedSchema.required || []),
+        ...resolvedSubSchema.required,
+      ];
+    }
+
+    // Merge other attributes (type, format, etc.)
+    if (resolvedSubSchema.type && !mergedSchema.type) {
+      // @ts-expect-error - We're carefully handling schema type merging
+      mergedSchema.type = resolvedSubSchema.type;
+    }
+    if (resolvedSubSchema.format && !mergedSchema.format) {
+      mergedSchema.format = resolvedSubSchema.format;
+    }
+    if (resolvedSubSchema.description && !mergedSchema.description) {
+      mergedSchema.description = resolvedSubSchema.description;
+    }
+  }
+
+  return mergedSchema;
+}
+
 // Add helper function to convert OpenAPI schema to Zod type
 function convertToZodSchema(
-  schema: OpenAPIV3.SchemaObject | undefined,
-  _isRequired = false
+  schema: OpenAPIV3.SchemaObject | OpenAPIV3.ReferenceObject | undefined,
+  _isRequired = false,
+  schemas: Map<string, OpenAPIV3.SchemaObject> = new Map()
 ): string {
   if (!schema) return "z.void()";
+
+  // Handle reference objects
+  if (isReferenceObject(schema)) {
+    const refName = getRefName(schema.$ref);
+    if (schemas.has(refName)) {
+      // For referenced schemas, create a reusable Zod schema
+      return `z.lazy(() => ${refName}Schema)`;
+    }
+    return "z.unknown()";
+  }
+
+  // Process allOf if present and didn't get merged earlier
+  if (schema.allOf) {
+    // Convert each subSchema in allOf to a Zod schema
+    const allOfSchemas = schema.allOf.map((subSchema) =>
+      convertToZodSchema(subSchema, _isRequired, schemas)
+    );
+
+    // For a single schema, just return it
+    if (allOfSchemas.length === 1) {
+      return allOfSchemas[0];
+    }
+
+    // For multiple schemas, nest the intersections
+    // z.intersection takes exactly two arguments, so we need to nest them for 3+ schemas
+    let result = `z.intersection(${allOfSchemas[0]}, ${allOfSchemas[1]})`;
+
+    // Add additional schemas by nesting intersections
+    for (let i = 2; i < allOfSchemas.length; i++) {
+      result = `z.intersection(${result}, ${allOfSchemas[i]})`;
+    }
+
+    return result;
+  }
+
+  // Process oneOf schemas using Zod union
+  if (schema.oneOf && schema.oneOf.length > 0) {
+    // Convert each subSchema in oneOf to a Zod schema
+    const oneOfSchemas = schema.oneOf.map((subSchema) =>
+      convertToZodSchema(subSchema, _isRequired, schemas)
+    );
+
+    // For a single schema, just return it
+    if (oneOfSchemas.length === 1) {
+      return oneOfSchemas[0];
+    }
+
+    // For multiple schemas, use z.union
+    // z.union([A, B]) is equivalent to A.or(B)
+    return oneOfSchemas.reduce((acc, current, index) => {
+      if (index === 0) return current;
+      return `${acc}.or(${current})`;
+    }, "");
+  }
 
   let numberType: string;
   let itemType: string;
   let properties: string[];
   let zodSchema: string;
+
+  // Handle nullable types using union type syntax
+  if (Array.isArray(schema.type)) {
+    if (schema.type.includes("null")) {
+      const nonNullTypes = schema.type.filter((t) => t !== "null");
+      if (nonNullTypes.length === 1) {
+        const nonNullSchema = { ...schema, type: nonNullTypes[0] };
+        return `${convertToZodSchema(nonNullSchema, _isRequired, schemas)}.nullable()`;
+      }
+    }
+    // Default to string if multiple non-null types
+    schema.type = "string";
+  }
 
   switch (schema.type) {
     case "string":
@@ -135,6 +379,12 @@ function convertToZodSchema(
         zodSchema = "z.string().email()";
       } else {
         zodSchema = "z.string()";
+        if (schema.minLength !== undefined) {
+          zodSchema += `.min(${schema.minLength})`;
+        }
+        if (schema.maxLength !== undefined) {
+          zodSchema += `.max(${schema.maxLength})`;
+        }
       }
       break;
 
@@ -156,10 +406,7 @@ function convertToZodSchema(
 
     case "array":
       if (schema.items) {
-        itemType = convertToZodSchema(
-          schema.items as OpenAPIV3.SchemaObject,
-          true
-        );
+        itemType = convertToZodSchema(schema.items, true, schemas);
         zodSchema = `z.array(${itemType})`;
       } else {
         zodSchema = "z.array(z.unknown())";
@@ -171,10 +418,7 @@ function convertToZodSchema(
 
       properties = Object.entries(schema.properties).map(([key, prop]) => {
         const propIsRequired = schema.required?.includes(key);
-        const propType = convertToZodSchema(
-          prop as OpenAPIV3.SchemaObject,
-          propIsRequired
-        );
+        const propType = convertToZodSchema(prop, propIsRequired, schemas);
         return `${key}: ${propIsRequired ? propType : `${propType}.optional()`}`;
       });
 
@@ -194,6 +438,7 @@ function convertToZodSchema(
 
 export async function generateSingleFile(
   routes: Map<string, Record<string, any>>,
+  schemas: Map<string, OpenAPIV3.SchemaObject>,
   outDir: string,
   baseUrl: string
 ) {
@@ -219,8 +464,16 @@ export async function generateSingleFile(
     }
   }
 
-  let content = `import { createApi, createApiEndpoint } from './createApi';\n`;
+  let content = `import { createApi, createApiEndpoint } from '@danstackme/apity';\n`;
   content += `import { z } from 'zod';\n\n`;
+
+  // Generate schema type definitions first
+  if (schemas.size > 0) {
+    content += `// Schema definitions\n`;
+    for (const [name, schema] of schemas) {
+      content += `export const ${name}Schema = ${convertToZodSchema(schema, true, schemas)};\n\n`;
+    }
+  }
 
   const fetchEndpointNames = new Map<string, string[]>();
 
@@ -237,14 +490,19 @@ export async function generateSingleFile(
 
       // Convert response schema
       if (Object.keys(schema.response).length > 0) {
-        content += `  response: ${convertToZodSchema(schema.response, true)},\n`;
+        if (isReferenceObject(schema.response)) {
+          const refName = getRefName(schema.response.$ref);
+          content += `  response: ${refName}Schema,\n`;
+        } else {
+          content += `  response: ${convertToZodSchema(schema.response, true, schemas)},\n`;
+        }
       } else {
         content += `  response: z.void(),\n`;
       }
 
       // Convert query parameters
       if (Object.keys(schema.query).length > 0) {
-        content += `  query: ${convertToZodSchema(schema.query)},\n`;
+        content += `  query: ${convertToZodSchema(schema.query, false, schemas)},\n`;
       }
 
       content += `});\n\n`;
@@ -270,19 +528,29 @@ export async function generateSingleFile(
 
       // Convert response schema
       if (Object.keys(schema.response).length > 0) {
-        content += `  response: ${convertToZodSchema(schema.response, true)},\n`;
+        if (isReferenceObject(schema.response)) {
+          const refName = getRefName(schema.response.$ref);
+          content += `  response: ${refName}Schema,\n`;
+        } else {
+          content += `  response: ${convertToZodSchema(schema.response, true, schemas)},\n`;
+        }
       } else {
         content += `  response: z.void(),\n`;
       }
 
       // Convert request body schema
       if (Object.keys(schema.body).length > 0) {
-        content += `  body: ${convertToZodSchema(schema.body)},\n`;
+        if (isReferenceObject(schema.body)) {
+          const refName = getRefName(schema.body.$ref);
+          content += `  body: ${refName}Schema,\n`;
+        } else {
+          content += `  body: ${convertToZodSchema(schema.body, false, schemas)},\n`;
+        }
       }
 
       // Convert query parameters
       if (Object.keys(schema.query).length > 0) {
-        content += `  query: ${convertToZodSchema(schema.query)},\n`;
+        content += `  query: ${convertToZodSchema(schema.query, false, schemas)},\n`;
       }
 
       content += `});\n\n`;
