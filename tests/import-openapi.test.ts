@@ -464,7 +464,7 @@ describe("import-openapi", () => {
 
       await generateRoutes(refSpec, { outDir: "src" });
       const writeFileCall = vi.mocked(writeFile).mock.calls[0][1] as string;
-      expect(writeFileCall).toMatch(/response: z\.unknown\(\)/);
+      expect(writeFileCall).toContain("response: z.void()");
     });
 
     it("should handle invalid parameter objects", async () => {
