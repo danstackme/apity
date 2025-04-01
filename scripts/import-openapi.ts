@@ -569,6 +569,11 @@ function convertToZodSchema(
     zodSchema += ".nullable()";
   }
 
+  if (schema.description) {
+    const escapedDescription = schema.description.replace(/[`'\\]/g, "\\$&");
+    zodSchema += `.describe(\`${escapedDescription}\`)`;
+  }
+
   return zodSchema;
 }
 
