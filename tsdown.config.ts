@@ -1,10 +1,9 @@
-import { defineConfig } from "tsup";
+import { defineConfig } from "tsdown";
 
 export default defineConfig({
   entry: ["src/index.ts", "scripts/import-openapi.ts"],
   format: ["esm", "cjs"],
   dts: true,
-  splitting: false,
   sourcemap: true,
   clean: true,
   treeshake: true,
@@ -19,7 +18,14 @@ export default defineConfig({
     "@babel/types",
   ],
   noExternal: ["yaml"],
+  inlineOnly: false,
   target: "node18",
   platform: "node",
   shims: true,
+  outExtensions({ format }) {
+    return {
+      js: format === "cjs" ? ".cjs" : ".js",
+      dts: ".d.ts",
+    };
+  },
 });

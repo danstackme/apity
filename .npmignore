@@ -9,7 +9,7 @@ scripts/
 .prettierrc*
 .eslintignore
 tsconfig*.json
-tsup.config.ts
+tsdown.config.ts
 vite.config.ts
 vitest.config.ts
 .husky/

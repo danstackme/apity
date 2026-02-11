@@ -207,7 +207,8 @@ describe("API Hooks Integration", () => {
     expect(onSuccess).toHaveBeenCalledWith(
       mockResponse,
       { name: "New User" },
-      undefined
+      undefined,
+      expect.objectContaining({ client: expect.anything() })
     );
     expect(onError).not.toHaveBeenCalled();
   });
@@ -239,7 +240,8 @@ describe("API Hooks Integration", () => {
     expect(onError).toHaveBeenCalledWith(
       error,
       { name: "New User" },
-      undefined
+      undefined,
+      expect.objectContaining({ client: expect.anything() })
     );
   });
 

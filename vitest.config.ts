@@ -27,7 +27,7 @@ export default defineConfig({
         "vitest.config.ts",
         "scripts/release.ts",
         "coverage/**",
-        "tsup.config.ts",
+        "tsdown.config.ts",
         "src/generated/**",
         "src/types.ts",
       ],
